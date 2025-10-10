@@ -1,0 +1,12 @@
+﻿extends:
+  - "spectral:oas"
+rules:
+  info-contact:
+    given: $.info.contact
+    then:
+      function: truthy
+  operation-tags:
+    given: $.paths[*][*]
+    then:
+      field: tags
+      function: truthy

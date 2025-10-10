@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TelegramAuthRequest",
+  "type": "object",
+  "required": ["initData"],
+  "properties": {
+    "initData": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Строка initData из Telegram WebApp"
+    }
+  },
+  "additionalProperties": false
+}

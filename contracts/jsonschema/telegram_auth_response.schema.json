@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TelegramAuthResponse",
+  "type": "object",
+  "required": [
+    "accessToken",
+    "tokenType",
+    "expiresIn",
+    "issuedAt",
+    "user"
+  ],
+  "properties": {
+    "accessToken": {
+      "type": "string",
+      "description": "JWT access token"
+    },
+    "tokenType": {
+      "type": "string",
+      "enum": ["Bearer"]
+    },
+    "expiresIn": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 3600
+    },
+    "issuedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "user": {
+      "$ref": "#/$defs/telegramUser"
+    },
+    "chat": {
+      "$ref": "#/$defs/telegramChat"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "telegramUser": {
+      "type": "object",
+      "required": [
+        "id",
+        "is_bot",
+        "first_name"
+      ],
+      "properties": {
+        "id": { "type": "integer" },
+        "is_bot": { "type": "boolean" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": ["string", "null"] },
+        "username": { "type": ["string", "null"] },
+        "language_code": { "type": ["string", "null"] },
+        "allows_write_to_pm": { "type": ["boolean", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "telegramChat": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "integer" },
+        "type": { "type": "string" },
+        "title": { "type": ["string", "null"] },
+        "username": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    }
+  }
+}

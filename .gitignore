@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+
+# Poetry
+poetry.lock
+
+# Node/Vite
+node_modules/
+dist/
+apps/webapp/node_modules/
+apps/webapp/dist/
+
+# Env
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+
+# Misc
+*.log

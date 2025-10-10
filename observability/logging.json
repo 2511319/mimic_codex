@@ -1,0 +1,19 @@
+﻿{
+  "version": 1,
+  "formatters": {
+    "json": {
+      "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+      "fmt": "%(asctime)s %(name)s %(levelname)s %(message)s %(trace_id)s"
+    }
+  },
+  "handlers": {
+    "default": {
+      "class": "logging.StreamHandler",
+      "formatter": "json"
+    }
+  },
+  "root": {
+    "level": "INFO",
+    "handlers": ["default"]
+  }
+}

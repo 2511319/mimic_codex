@@ -1,0 +1,14 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EpilogueResponse",
+  "type": "object",
+  "required": ["summary", "futureHooks"],
+  "properties": {
+    "summary": { "type": "string" },
+    "futureHooks": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,43 @@
+knowledge:
+  srd:
+    store: pgvector
+    embedding:
+      provider: openai
+      model: text-embedding-3-large
+      dimensions: 1536
+    retrieval:
+      mode: hybrid
+      k_vector: 12
+      k_keyword: 50
+      fuse: rrf
+  lore:
+    store: pgvector
+    embedding:
+      provider: openai
+      model: text-embedding-3-large
+      dimensions: 1024
+    retrieval:
+      mode: hybrid
+      k_vector: 10
+      k_keyword: 50
+      fuse: rrf
+  episode:
+    store: pgvector
+    embedding:
+      provider: openai
+      model: text-embedding-3-large
+      dimensions: 768
+    retrieval:
+      mode: vector
+      k_vector: 8
+      filters:
+        party_id: "${party_id}"
+  artcards:
+    store: pgvector
+    embedding:
+      provider: openai
+      model: text-embedding-3-large
+      dimensions: 1024
+    retrieval:
+      mode: vector
+      k_vector: 8

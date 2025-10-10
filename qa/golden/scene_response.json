@@ -1,0 +1,17 @@
+﻿{
+  "tone": "heroic_semidark",
+  "textSegments": [
+    { "id": "s1", "md": "Вы стоите у ворот древнего города." }
+  ],
+  "choices": [
+    { "id": "c1", "label": "Постучать", "skillCheck": { "skill": "Убеждение", "dc": 12 } },
+    { "id": "c2", "label": "Осмотреть стену", "skillCheck": { "skill": "Внимательность", "dc": 10 } },
+    { "id": "c3", "label": "Попробовать пролезть", "skillCheck": { "skill": "Ловкость", "dc": 14 } },
+    { "id": "cx", "label": "Свой ход" }
+  ],
+  "consequences": {
+    "success": ["tag:+welcome"],
+    "partial": ["alarm:+1"],
+    "fail": ["spawn:guard"]
+  }
+}

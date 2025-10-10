@@ -1,0 +1,56 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SceneResponse",
+  "type": "object",
+  "required": ["textSegments", "choices", "tone"],
+  "properties": {
+    "tone": { "type": "string" },
+    "textSegments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "md"],
+        "properties": {
+          "id": { "type": "string" },
+          "md": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "choices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "skillCheck": {
+            "type": "object",
+            "required": ["skill", "dc"],
+            "properties": {
+              "skill": { "type": "string" },
+              "dc": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 3,
+      "maxItems": 4
+    },
+    "consequences": {
+      "type": "object",
+      "required": ["success", "partial", "fail"],
+      "properties": {
+        "success": { "type": "array", "items": { "type": "string" } },
+        "partial": { "type": "array", "items": { "type": "string" } },
+        "fail": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

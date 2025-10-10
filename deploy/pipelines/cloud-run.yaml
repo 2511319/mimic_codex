@@ -1,0 +1,24 @@
+﻿apiVersion: deploy/v1
+kind: CloudRunPipeline
+metadata:
+  name: rpg-bot-cloud-run
+spec:
+  image: ghcr.io/rpg-bot/gateway-api:latest
+  source:
+    servicePath: services/gateway_api
+    dockerfile: Dockerfile
+  tests:
+    - poetry run pytest
+    - npm run lint --prefix apps/webapp
+  deploy:
+    strategy: blue-green
+    project: rpg-bot-prod
+    region: europe-west1
+    serviceAccount: cloud-run-deployer@rpg-bot-prod.iam.gserviceaccount.com
+  env:
+    - name: BOT_TOKEN
+      secretRef: projects/rpg-bot-prod/secrets/bot-token
+    - name: JWT_SECRET
+      secretRef: projects/rpg-bot-prod/secrets/jwt-secret
+    - name: JWT_TTL_SECONDS
+      value: "900"

@@ -1,0 +1,28 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CombatResponse",
+  "type": "object",
+  "required": ["roundSummary", "actions"],
+  "properties": {
+    "roundSummary": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["actor", "description"],
+        "properties": {
+          "actor": { "type": "string" },
+          "description": { "type": "string" },
+          "status": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,83 @@
+﻿openapi: 3.1.0
+info:
+  title: RPG-Bot Gateway API
+  version: 1.0.0
+  contact:
+    name: RPG-Bot Engineering
+    url: https://rpg-bot.example/docs
+  description: |
+    REST API для Telegram Mini App. Поддерживает обмен initData на JWT и проверку состояния сервиса.
+servers:
+  - url: https://api.rpg.bot/v1
+    description: Production
+  - url: https://staging.api.rpg.bot/v1
+    description: Staging
+tags:
+  - name: auth
+    description: Authentication flows for Telegram Mini App.
+  - name: system
+    description: Operational endpoints exposing health and configuration.
+paths:
+  /v1/auth/telegram:
+    post:
+      summary: Exchange initData for access token
+      description: >
+        Validates Telegram initData payload, applies idempotency guarantees and returns a short-lived
+        JWT that authenticates the player session in the Mini App.
+      operationId: exchangeInitData
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../jsonschema/telegram_auth_request.schema.json
+      responses:
+        "200":
+          description: Successful exchange
+          content:
+            application/json:
+              schema:
+                $ref: ../jsonschema/telegram_auth_response.schema.json
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /health:
+    get:
+      summary: Service healthcheck
+      description: Returns service readiness along with API version.
+      operationId: readHealth
+      tags: [system]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status, api_version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        api_version:
+          type: string
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
