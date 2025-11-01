@@ -5,8 +5,16 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .coverage
+.coverage.*
+htmlcov/
+
+# Virtual envs
+.venv/
+venv/
+.python-version
 
 # Poetry
+# Keep as team policy. If you prefer reproducible builds, remove this ignore to commit lockfile.
 poetry.lock
 
 # Node/Vite
@@ -14,14 +22,28 @@ node_modules/
 dist/
 apps/webapp/node_modules/
 apps/webapp/dist/
+apps/webapp/test-results/
+apps/webapp/playwright-report/
+apps/webapp/blob-report/
 
 # Env
 .env
 .env.local
+.env.*
+!.env.example
 
 # IDE
 .idea/
 .vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Temp files
+temp_*.ts
+temp_*.tsx
+tmp_inspect*.py
 
 # Misc
 *.log
