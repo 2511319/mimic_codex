@@ -1,0 +1,39 @@
+scenes:
+  - id: scn_demo
+    title: Moonlit Ruins
+    summary: Партия исследует древние руины под луной
+    tags: [moon, ruins, exploration]
+    timeline:
+      - Party arrives at the ruins
+      - Discover hidden chamber
+  - id: scn_market
+    title: Foggy Market
+    summary: Торговцы встречают героев на покрытом туманом рынке
+    tags: [market, fog, merchants]
+    timeline:
+      - Heroes enter the market
+      - Bargain for rare artifacts
+
+npcs:
+  - id: npc_sage
+    name: Арин
+    archetype: sage
+    summary: Древний мудрец, охраняющий знания о руинах
+    voice_tts: male_calm
+  - id: npc_merchant
+    name: Яра
+    archetype: merchant
+    summary: Торговка редкими артефактами
+    voice_tts: female_warm
+
+art:
+  - id: art_ruins
+    prompt: moonlit ruins with glowing crystals
+    tags: [moon, crystals, ruins]
+    entities:
+      scene: [scn_demo]
+  - id: art_market
+    prompt: foggy market stalls at dawn
+    tags: [fog, market]
+    entities:
+      scene: [scn_market]

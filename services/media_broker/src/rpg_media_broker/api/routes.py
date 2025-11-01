@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from ..config import HealthPayload, Settings, get_settings
 from ..manager import MediaJobManager
 from ..models import MediaJobRequest, MediaJobResponse
+from ..rate_limit import rate_limit
 
 router = APIRouter()
 
@@ -29,7 +30,11 @@ async def read_health(settings: Settings = Depends(get_settings)) -> HealthPaylo
     status_code=status.HTTP_202_ACCEPTED,
     tags=["jobs"],
 )
-async def create_job(request_body: MediaJobRequest, request: Request) -> MediaJobResponse:
+async def create_job(
+    request_body: MediaJobRequest,
+    request: Request,
+    _rl: None = Depends(rate_limit),
+) -> MediaJobResponse:
     manager = get_manager(request)
     record = await manager.enqueue(request_body)
     return MediaJobResponse.from_record(record)

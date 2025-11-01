@@ -1,0 +1,124 @@
+scenes:
+  - id: scn_001
+    title: Mist at the Moon Bridge
+    summary: Party reaches a fog-draped bridge where tolls are paid in vows. A ronin bars the way, testing intent and truth.
+    tags: [moon_bridge, encounter, intrigue]
+    timeline:
+      - Arrival under a broken moon
+      - Ronin challenges the party’s purpose
+      - Sigil glows on the arch
+
+  - id: scn_002
+    title: Smuggler’s Codes
+    summary: In a hut near the bridge a smuggler trades routes and rumors for favors; choices open or close shortcuts.
+    tags: [village, intrigue, heist]
+    timeline:
+      - Coded knock at the shutter
+      - Map with erased marks
+      - Offer of a risky shortcut
+
+  - id: scn_003
+    title: Witch’s Circle
+    summary: A clearing with standing stones; a witch bargains for a memory in exchange for safe passage.
+    tags: [forest, ritual, dark_fantasy]
+    timeline:
+      - A circle of stones
+      - A whispered price: a true memory
+      - A token carved from moonlight
+
+  - id: scn_004
+    title: Underbridge Vault
+    summary: Hidden vault beneath the bridge with contraband ledgers; alarms and silent bells demand careful moves.
+    tags: [heist, stealth, ruins]
+    timeline:
+      - Hidden trapdoor
+      - Ledger with coded names
+      - Footsteps above
+
+  - id: scn_005
+    title: Gatekeeper’s Judgment
+    summary: A spirit judge weighs oaths versus coins; the moon token grants safe passage if truth outweighs greed.
+    tags: [moon_bridge, verdict, epilogue]
+    timeline:
+      - Spirit manifests at the arch
+      - Questions about intent
+      - Passage granted or denied
+
+npcs:
+  - id: npc_ronin
+    name: Li Shen
+    archetype: ronin
+    summary: Wandering swordsman who tests travelers’ vows.
+    voice_tts: male_smoke_light
+
+  - id: npc_smuggler
+    name: Mara Vey
+    archetype: smuggler
+    summary: Quick-eyed fixer trading secrets for favors.
+    voice_tts: female_quick_bright
+
+  - id: npc_witch
+    name: Old Rowan
+    archetype: witch
+    summary: Keeper of a stone circle, trades in memories.
+    voice_tts: female_low_gravel
+
+art:
+  - id: art_bridge_mist
+    prompt: moonlit misty bridge, solitary ronin with katana, fog, pale sigil on arch
+    tags: [moon, mist, ronin]
+    entities:
+      npc: [npc_ronin]
+      location: [moon_bridge]
+
+  - id: art_witch_circle
+    prompt: forest clearing, standing stones under broken moon, witch with carved token
+    tags: [forest, ritual, stones]
+    entities:
+      npc: [npc_witch]
+
+  - id: art_underbridge_vault
+    prompt: wooden trapdoor under ancient bridge, ledger, lantern light, stealth mood
+    tags: [heist, stealth, vault]
+    entities:
+      location: [underbridge_vault]
+
+lore:
+  - id: lore_reward_moon_token
+    title: reward:moon_token
+    body: A token that grants safe passage across moon bridges when borne by truthful travelers.
+    tags: [reward, token]
+    related:
+      scene: scn_001
+      npc: npc_ronin
+
+  - id: lore_ronin_code
+    title: lore:ronin_code
+    body: The ronin honors vows above coin; lies are met with a drawn blade.
+    tags: [lore, ronin]
+    related:
+      scene: scn_001
+
+  - id: lore_smuggler_routes
+    title: lore:smuggler_routes
+    body: Smuggler routes shift with the tides; erased marks point to a drowned path.
+    tags: [lore, routes]
+    related:
+      scene: scn_002
+      npc: npc_smuggler
+
+  - id: lore_witch_bargain
+    title: lore:witch_bargain
+    body: A memory given willingly binds safe passage for one night.
+    tags: [lore, ritual]
+    related:
+      scene: scn_003
+      npc: npc_witch
+
+  - id: lore_gatekeeper_verdict
+    title: lore:gatekeeper_verdict
+    body: The gatekeeper spirit weighs intent; truth lightens the scale, greed burdens it.
+    tags: [lore, verdict]
+    related:
+      scene: scn_005
+

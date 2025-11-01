@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rpg-bot.example/contracts/events/event_envelope.schema.json",
+  "title": "EventEnvelope",
+  "type": "object",
+  "required": ["eventType", "payload"],
+  "properties": {
+    "eventType": { "type": "string", "minLength": 1 },
+    "payload": {},
+    "traceId": { "type": ["string", "null"] },
+    "senderId": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

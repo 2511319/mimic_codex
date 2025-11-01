@@ -25,6 +25,14 @@ pyjwt = "^2.8.0"
 python-dateutil = "^2.9.0.post0"
 pyyaml = "^6.0.1"
 python-json-logger = "^2.0.7"
+opentelemetry-sdk = "^1.28.2"
+opentelemetry-exporter-otlp = "^1.28.2"
+opentelemetry-instrumentation-fastapi = "^0.49b2"
+opentelemetry-instrumentation-requests = "^0.49b2"
+prometheus-fastapi-instrumentator = "^7.0.0"
+openai = "^1.0.0"
+psycopg = { version = "^3.2.0", extras = ["binary"] }
+jsonschema = "^4.23.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.1"

@@ -30,10 +30,17 @@ class AccessTokenResponse(BaseModel):
     chat: TelegramChat | None = None
 
 
+class GenerationRequest(BaseModel):
+    """Запрос на генерацию контента."""
+
+    prompt: str = Field(..., min_length=2)
+
+
 __all__ = [
     "TelegramAuthRequest",
     "AccessTokenResponse",
     "InitDataPayload",
     "TelegramUser",
     "TelegramChat",
+    "GenerationRequest",
 ]

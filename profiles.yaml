@@ -1,0 +1,17 @@
+profiles:
+  scene.v1:
+    temperature: 0.6
+    max_output_tokens: 720
+    response_schema: scene_response.schema.json
+  social.v1:
+    temperature: 0.45
+    max_output_tokens: 560
+    response_schema: social_response.schema.json
+  combat.v1:
+    temperature: 0.7
+    max_output_tokens: 680
+    response_schema: combat_response.schema.json
+  epilogue.v1:
+    temperature: 0.35
+    max_output_tokens: 400
+    response_schema: epilogue_response.schema.json

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, WebSocke
 from pydantic import ValidationError
 
 from ..config import HealthPayload, Settings, get_settings
+from ..rate_limit import rate_limit
 from ..hub import PartyHub
 from ..models import BroadcastAck, BroadcastRequest
 
@@ -52,6 +53,7 @@ async def broadcast_event(
     campaign_id: str,
     request_body: BroadcastRequest,
     request: Request,
+    _rl: None = Depends(rate_limit),
 ) -> BroadcastAck:
     """Broadcast event to all connected peers."""
 

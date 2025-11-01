@@ -1,0 +1,16 @@
+{
+  "jobId": "job-123",
+  "jobType": "image",
+  "status": "succeeded",
+  "result": {
+    "cdnUrl": "https://cdn.example/renders/job-123.webp",
+    "metadata": {
+      "prompt": "Ancient ruins",
+      "provider": "mock"
+    }
+  },
+  "error": null,
+  "createdAt": "2024-10-09T12:00:00Z",
+  "updatedAt": "2024-10-09T12:00:03Z",
+  "clientToken": "token-123"
+}

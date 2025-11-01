@@ -1,12 +1,12 @@
-﻿extends:
-  - "spectral:oas"
+extends:
+  - spectral:oas
+
 rules:
-  info-contact:
-    given: $.info.contact
-    then:
-      function: truthy
-  operation-tags:
-    given: $.paths[*][*]
-    then:
-      field: tags
-      function: truthy
+  # Строгие правила, совместимые с Spectral v6
+  operation-operationId-unique: true
+  no-$ref-siblings: error
+  operation-success-response: error
+  # Предупреждения для полезных, но не критичных моментов
+  oas3-api-servers: warn
+  info-description: warn
+  operation-tags: warn

@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway_api/Dockerfile
+    environment:
+      - API_VERSION=${API_VERSION:-1.0.0}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_TTL_SECONDS=${JWT_TTL_SECONDS:-900}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5-nano}
+      - OPENAI_TIMEOUT_SECONDS=${OPENAI_TIMEOUT_SECONDS:-120}
+      - GENERATION_PROFILES_PATH=${GENERATION_PROFILES_PATH:-profiles.yaml}
+      - GENERATION_SCHEMA_ROOT=${GENERATION_SCHEMA_ROOT:-contracts/jsonschema}
+      - GENERATION_MAX_RETRIES=${GENERATION_MAX_RETRIES:-2}
+      - KNOWLEDGE_SOURCE_PATH=${KNOWLEDGE_SOURCE_PATH:-data/knowledge/sample.yaml}
+      - KNOWLEDGE_DATABASE_URL=${KNOWLEDGE_DATABASE_URL}
+      - KNOWLEDGE_VECTOR_TABLE=${KNOWLEDGE_VECTOR_TABLE:-memory37_vectors}
+      - KNOWLEDGE_VECTOR_DIMENSION=${KNOWLEDGE_VECTOR_DIMENSION:-1536}
+      - ENABLE_OTEL=${ENABLE_OTEL:-false}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+    ports:
+      - "8000:8080"
+    depends_on: []
+
+  party:
+    build:
+      context: .
+      dockerfile: services/party_sync/Dockerfile
+    environment:
+      - API_VERSION=${API_VERSION:-1.0.0}
+      - ENABLE_OTEL=${ENABLE_OTEL:-false}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+    ports:
+      - "8001:8081"
+
+  media:
+    build:
+      context: .
+      dockerfile: services/media_broker/Dockerfile
+    environment:
+      - API_VERSION=${API_VERSION:-1.0.0}
+      - PROCESSING_DELAY_MS=${PROCESSING_DELAY_MS:-0}
+      - ENABLE_OTEL=${ENABLE_OTEL:-false}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+    ports:
+      - "8002:8082"
+
+  webapp:
+    build:
+      context: .
+      dockerfile: apps/webapp/Dockerfile
+    environment:
+      - VITE_API_BASE_URL=http://gateway:8080
+      - VITE_MEDIA_BASE_URL=http://media:8082
+      - VITE_PARTY_WS_URL=ws://party:8081
+    ports:
+      - "4173:4173"
+    depends_on:
+      - gateway
+      - party
+      - media
+

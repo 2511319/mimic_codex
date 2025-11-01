@@ -18,3 +18,9 @@ def test_scene_response_matches_schema() -> None:
     data = load_json(GOLDEN_DIR / "scene_response.json")
     jsonschema.validate(instance=data, schema=schema)
 
+
+def test_media_job_response_matches_schema() -> None:
+    schema = load_json(SCHEMA_DIR / "media_job_response.schema.json")
+    data = load_json(GOLDEN_DIR / "media_job_response.json")
+    jsonschema.validate(instance=data, schema=schema)
+

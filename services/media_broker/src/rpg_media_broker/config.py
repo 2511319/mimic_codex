@@ -29,6 +29,25 @@ class Settings(BaseSettings):
         description="Limit on in-memory job history entries.",
     )
 
+    # Optional in-app rate limit (dev/staging)
+    rate_limit_enabled: bool = Field(
+        False,
+        description="Enable in-app rate limit for POST /v1/media/jobs",
+        alias="RATE_LIMIT_ENABLED",
+    )
+    rate_limit_rps: float = Field(
+        2.0,
+        ge=0.1,
+        description="Requests per second per key",
+        alias="RATE_LIMIT_RPS",
+    )
+    rate_limit_burst: int = Field(
+        4,
+        ge=1,
+        description="Burst capacity for token bucket",
+        alias="RATE_LIMIT_BURST",
+    )
+
 
 class HealthPayload(BaseModel):
     """Health response payload."""

@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from ..rate_limit import rate_limit
 
 from ..auth.telegram import InitDataValidationError, InitDataValidator
 from ..config import HealthPayload, Settings, get_settings
 from ..jwt_utils import issue_access_token
-from ..models import AccessTokenResponse, TelegramAuthRequest
+from ..models import AccessTokenResponse, GenerationRequest, TelegramAuthRequest
 
 router = APIRouter()
 
@@ -19,6 +21,70 @@ def read_health(settings: Settings = Depends(get_settings)) -> HealthPayload:
     """Возвращает статус здоровья сервиса."""
 
     return HealthPayload(status="ok", api_version=settings.api_version)
+
+
+@router.get("/v1/knowledge/search", tags=["knowledge"])
+def search_knowledge(
+    request: Request,
+    q: str = Query(..., min_length=2, alias="q"),
+    top_k: int = Query(5, ge=1, le=20),
+    _rl: None = Depends(rate_limit),
+) -> dict[str, list[dict[str, Any]]]:
+    """Поиск в базе знаний Memory37."""
+
+    service = getattr(request.app.state, "knowledge_service", None)
+    if not service or not service.available:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Knowledge search unavailable")
+
+    results = service.search(q, top_k=top_k)
+    return {"items": [item.model_dump() for item in results]}
+
+
+@router.post("/v1/generation/{profile}", tags=["generation"])
+def generate_content(
+    profile: str,
+    payload: GenerationRequest,
+    request: Request,
+    _rl: None = Depends(rate_limit),
+) -> dict[str, Any]:
+    """Генерация структурированного контента по профилю."""
+
+    service = getattr(request.app.state, "generation_service", None)
+    if not service or not service.available:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Generation service unavailable")
+    if profile not in service.profiles():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation profile not found")
+
+    try:
+        result = service.generate(profile, payload.prompt)
+    except Exception as exc:  # pragma: no cover - пробрасываем ошибку наружу
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+    return {"profile": profile, "result": result}
+
+
+@router.get("/v1/generation/profiles", tags=["generation"])
+def list_generation_profiles(request: Request) -> dict[str, list[str]]:
+    """Возвращает список доступных профилей генерации."""
+
+    service = getattr(request.app.state, "generation_service", None)
+    if not service or not service.available:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Generation service unavailable")
+    return {"profiles": service.profiles()}
+
+
+@router.get("/v1/generation/profiles/{profile}", tags=["generation"])
+def get_generation_profile(profile: str, request: Request) -> dict[str, Any]:
+    """Возвращает информацию о профиле генерации."""
+
+    service = getattr(request.app.state, "generation_service", None)
+    if not service or not service.available:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Generation service unavailable")
+    try:
+        detail = service.profile_detail(profile)
+    except KeyError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation profile not found") from None
+    return detail
 
 
 @router.post(

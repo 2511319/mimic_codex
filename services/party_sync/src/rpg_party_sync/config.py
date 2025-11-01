@@ -28,6 +28,25 @@ class Settings(BaseSettings):
         description="Number of last events retained for late subscribers.",
     )
 
+    # Optional in-app rate limit (dev/staging)
+    rate_limit_enabled: bool = Field(
+        False,
+        description="Enable in-app rate limit for broadcast endpoint",
+        alias="RATE_LIMIT_ENABLED",
+    )
+    rate_limit_rps: float = Field(
+        2.0,
+        ge=0.1,
+        description="Requests per second per key",
+        alias="RATE_LIMIT_RPS",
+    )
+    rate_limit_burst: int = Field(
+        5,
+        ge=1,
+        description="Burst capacity for token bucket",
+        alias="RATE_LIMIT_BURST",
+    )
+
 
 class HealthPayload(BaseModel):
     """Health-check response payload."""

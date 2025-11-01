@@ -1,0 +1,20 @@
+groups:
+  - name: rpg-app
+    rules:
+      - alert: HighErrorRateGateway
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 10m
+        labels: { severity: page }
+        annotations: { summary: "Gateway 5xx error_rate > 5% (10m)" }
+
+      - alert: SlowGeneration
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{path=~"/v1/generation/.*"}[5m])) by (le)) > 4
+        for: 10m
+        labels: { severity: warn }
+        annotations: { summary: "Generation p95 > 4s (10m)" }
+
+      - alert: MediaBacklog
+        expr: avg_over_time(media_queue_depth[5m]) > 50
+        for: 5m
+        labels: { severity: warn }
+        annotations: { summary: "Media queue depth > 50 (5m)" }
