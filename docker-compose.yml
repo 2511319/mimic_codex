@@ -1,6 +1,33 @@
 version: "3.9"
 
 services:
+  pg:
+    image: ankane/pgvector:latest
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mimic
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      - NEO4J_AUTH=neo4j/test
+      - NEO4J_PLUGINS=["apoc","graph-data-science"]
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+
+
   gateway:
     build:
       context: .
@@ -64,3 +91,6 @@ services:
       - party
       - media
 
+volumes:
+  neo4j_data: {}
+  neo4j_logs: {}

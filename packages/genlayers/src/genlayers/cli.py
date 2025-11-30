@@ -1,4 +1,4 @@
-﻿"""CLI для управления генеративными профилями genlayers."""
+"""CLI для управления генеративными профилями genlayers."""
 
 from __future__ import annotations
 

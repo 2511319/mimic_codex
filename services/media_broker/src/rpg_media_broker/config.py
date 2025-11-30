@@ -1,4 +1,4 @@
-﻿"""Configuration for media broker service."""
+"""Configuration for media broker service."""
 
 from __future__ import annotations
 

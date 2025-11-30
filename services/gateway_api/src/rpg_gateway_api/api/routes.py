@@ -1,4 +1,4 @@
-﻿"""Маршруты Gateway API."""
+"""Маршруты Gateway API."""
 
 from __future__ import annotations
 

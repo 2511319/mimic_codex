@@ -1,4 +1,4 @@
-﻿"""Сервис генерации контента на базе genlayers."""
+"""Сервис генерации контента на базе genlayers."""
 
 from __future__ import annotations
 

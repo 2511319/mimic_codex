@@ -1,4 +1,4 @@
-﻿"""Настройки для инициализации движка genlayers."""
+"""Настройки для инициализации движка genlayers."""
 
 from __future__ import annotations
 

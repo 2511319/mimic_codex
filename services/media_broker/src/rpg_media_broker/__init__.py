@@ -1,4 +1,4 @@
-﻿"""Media broker service package."""
+"""Media broker service package."""
 
 from .app import create_app
 from .version import __version__

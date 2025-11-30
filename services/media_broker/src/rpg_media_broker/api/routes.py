@@ -1,4 +1,4 @@
-﻿"""HTTP API for media broker."""
+"""HTTP API for media broker."""
 
 from __future__ import annotations
 

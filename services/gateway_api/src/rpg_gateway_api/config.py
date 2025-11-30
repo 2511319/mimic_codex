@@ -1,4 +1,4 @@
-﻿"""Конфигурация сервиса Gateway API."""
+"""Конфигурация сервиса Gateway API."""
 
 from __future__ import annotations
 

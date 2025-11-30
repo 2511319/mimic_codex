@@ -1,4 +1,4 @@
-﻿"""Валидация Telegram initData для Mini App."""
+"""Валидация Telegram initData для Mini App."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-﻿"""Media broker FastAPI application."""
+"""Media broker FastAPI application."""
 
 from __future__ import annotations
 

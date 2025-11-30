@@ -7,6 +7,8 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
+coverage/
+*.lcov
 
 # Virtual envs
 .venv/
@@ -47,3 +49,10 @@ tmp_inspect*.py
 
 # Misc
 *.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Local/legacy sandboxes
+Context_engine_legacy/
+**/.mimic_index/

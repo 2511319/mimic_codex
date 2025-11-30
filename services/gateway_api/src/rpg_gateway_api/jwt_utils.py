@@ -1,4 +1,4 @@
-﻿"""Утилиты для выпуска JWT."""
+"""Утилиты для выпуска JWT."""
 
 from __future__ import annotations
 

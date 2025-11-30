@@ -1,4 +1,4 @@
-﻿"""Knowledge search integration using Memory37."""
+"""Knowledge search integration using Memory37."""
 
 from __future__ import annotations
 

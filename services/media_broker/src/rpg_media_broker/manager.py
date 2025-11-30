@@ -1,4 +1,4 @@
-﻿"""Async media job manager."""
+"""Async media job manager."""
 
 from __future__ import annotations
 

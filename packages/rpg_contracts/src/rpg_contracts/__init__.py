@@ -1,4 +1,4 @@
-﻿"""Работа с контрактами API."""
+"""Работа с контрактами API."""
 
 from __future__ import annotations
 

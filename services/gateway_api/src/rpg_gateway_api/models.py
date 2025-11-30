@@ -1,4 +1,4 @@
-﻿"""Pydantic-модели публичного API."""
+"""Pydantic-модели публичного API."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-﻿"""Создание приложения FastAPI."""
+"""Создание приложения FastAPI."""
 
 from __future__ import annotations
 

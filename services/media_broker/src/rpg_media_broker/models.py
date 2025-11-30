@@ -1,4 +1,4 @@
-﻿"""Data models for media broker."""
+"""Data models for media broker."""
 
 from __future__ import annotations
 

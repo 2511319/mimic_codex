@@ -1,4 +1,4 @@
-﻿"""Version helpers for media broker."""
+"""Version helpers for media broker."""
 
 from __future__ import annotations
 
