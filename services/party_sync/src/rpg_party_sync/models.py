@@ -14,8 +14,8 @@ class BroadcastMessage(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     event_type: str = Field(..., alias="eventType", description="Machine-readable event type.")
-    payload: dict[str, Any] | None = Field(
-        default=None,
+    payload: dict[str, Any] = Field(
+        ...,
         description="Arbitrary structured payload broadcast to the clients.",
     )
     trace_id: str | None = Field(
@@ -30,8 +30,13 @@ class BroadcastMessage(BaseModel):
     )
 
 
-class BroadcastRequest(BroadcastMessage):
+class BroadcastRequest(BaseModel):
     """HTTP request body for broadcast endpoint."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    campaign_id: str = Field(..., alias="campaignId")
+    message: BroadcastMessage
 
 
 class BroadcastAck(BaseModel):

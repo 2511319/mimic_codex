@@ -36,10 +36,12 @@ def test_cli_generate(monkeypatch, tmp_path: Path) -> None:
     result = runner.invoke(
         app,
         [
+            "generate",
+            "--profile",
             "scene",
             "--prompt",
             "Hello",
-            "--config",
+            "--profiles-path",
             str(config_path),
             "--schema-root",
             str(schema_root),

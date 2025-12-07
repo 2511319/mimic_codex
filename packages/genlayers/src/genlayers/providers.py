@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from copy import deepcopy
 from typing import Any, Protocol, runtime_checkable
 
 from .exceptions import GenerationError
@@ -28,10 +29,8 @@ class LanguageModelProvider(Protocol):
 
 try:  # pragma: no cover - импорт зависит от окружения
     from openai import OpenAI
-    from openai.error import OpenAIError
 except ModuleNotFoundError:  # pragma: no cover - openai не установлен
     OpenAI = None  # type: ignore[assignment]
-    OpenAIError = Exception  # type: ignore[assignment]
 
 
 class OpenAIResponsesProvider(LanguageModelProvider):
@@ -46,7 +45,7 @@ class OpenAIResponsesProvider(LanguageModelProvider):
         timeout: float | None = 120.0,
     ) -> None:
         if OpenAI is None:
-            raise GenerationError("OpenAI SDK недоступен. Установите пакет 'openai'.")
+            raise GenerationError("OpenAI SDK is not installed or misconfigured")
         self._model = model
         self._client = client or OpenAI(api_key=api_key, timeout=timeout)
 
@@ -59,23 +58,33 @@ class OpenAIResponsesProvider(LanguageModelProvider):
         schema: dict[str, Any],
         schema_name: str,
     ) -> str:
+        logger.info(
+            "OpenAI generate model=%s prompt_len=%d max_output_tokens=%d schema=%s",
+            self._model,
+            len(prompt),
+            max_output_tokens,
+            schema_name,
+        )
         try:
+            schema_payload = _normalize_schema(schema)
             response = self._client.responses.create(
                 model=self._model,
                 input=prompt,
-                temperature=temperature,
                 max_output_tokens=max_output_tokens,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {"name": schema_name, "schema": schema},
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": schema_name,
+                        "schema": schema_payload,
+                    }
                 },
             )
-        except OpenAIError as exc:  # pragma: no cover - требует сетевого вызова
-            logger.exception("OpenAI generation failed")
-            raise GenerationError("Не удалось получить ответ от OpenAI.", cause=exc) from exc
+        except Exception as exc:  # pragma: no cover - требует сетевого вызова
+            logger.exception("LLM provider failed")
+            raise GenerationError("LLM provider failed", cause=exc) from exc
 
         text = self._extract_text(response)
-        if text is None:
+        if text is None or not text.strip():
             raise GenerationError("OpenAI вернул пустой ответ.")
         return text
 
@@ -98,3 +107,25 @@ class OpenAIResponsesProvider(LanguageModelProvider):
         if parts:
             return "".join(parts)
         return None
+
+
+def _normalize_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Приводит схему к требованиям Responses API (все поля в required)."""
+
+    def _walk(node: Any) -> Any:
+        if isinstance(node, dict):
+            if node.get("type") == "object":
+                props = node.get("properties")
+                if isinstance(props, dict) and props:
+                    node["required"] = list(props.keys())
+                    for value in props.values():
+                        _walk(value)
+            if "items" in node:
+                _walk(node["items"])
+            for key in ("anyOf", "oneOf", "allOf"):
+                if key in node and isinstance(node[key], list):
+                    for item in node[key]:
+                        _walk(item)
+        return node
+
+    return _walk(deepcopy(schema))

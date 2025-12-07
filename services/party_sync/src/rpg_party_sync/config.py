@@ -21,11 +21,15 @@ class Settings(BaseSettings):
         le=500,
         description="Safety cap for simultaneous websocket connections per campaign.",
     )
-    broadcast_history_limit: int = Field(
-        50,
+    history_limit: int = Field(
+        100,
+        ge=0,
+        description="Max number of events to keep in memory per campaign.",
+    )
+    max_campaigns: int = Field(
+        1000,
         ge=1,
-        le=500,
-        description="Number of last events retained for late subscribers.",
+        description="Max number of campaigns to track in memory.",
     )
 
     # Optional in-app rate limit (dev/staging)
@@ -35,13 +39,13 @@ class Settings(BaseSettings):
         alias="RATE_LIMIT_ENABLED",
     )
     rate_limit_rps: float = Field(
-        2.0,
+        5.0,
         ge=0.1,
         description="Requests per second per key",
         alias="RATE_LIMIT_RPS",
     )
     rate_limit_burst: int = Field(
-        5,
+        10,
         ge=1,
         description="Burst capacity for token bucket",
         alias="RATE_LIMIT_BURST",

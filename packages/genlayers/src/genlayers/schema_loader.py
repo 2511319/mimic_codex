@@ -36,3 +36,8 @@ class SchemaLoader:
         if not isinstance(data, dict):
             raise ValueError("Root schema must be an object.")
         return data
+
+    def load_schema(self, name: str) -> dict[str, Any]:
+        """Синоним для load, совместимый с публичным контрактом."""
+
+        return self.load(name)

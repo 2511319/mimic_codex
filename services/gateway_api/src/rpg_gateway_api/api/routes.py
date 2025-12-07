@@ -11,9 +11,78 @@ from ..rate_limit import rate_limit
 from ..auth.telegram import InitDataValidationError, InitDataValidator
 from ..config import HealthPayload, Settings, get_settings
 from ..jwt_utils import issue_access_token
-from ..models import AccessTokenResponse, GenerationRequest, TelegramAuthRequest
+from ..models import (
+    AccessTokenResponse,
+    GenerationRequest,
+    SceneGenerateRequest,
+    SceneGenerateResponse,
+    TelegramAuthRequest,
+)
+try:  # optional memory37-graph
+    from memory37_graph import SceneGraphContextRequest, KnowledgeVersionRef  # type: ignore
+except Exception:  # pragma: no cover
+    SceneGraphContextRequest = None  # type: ignore
+    KnowledgeVersionRef = None  # type: ignore
+from ..graph import init_graph_service
+from ..generation import GenerationService
+from ..generation_context import GenerationContextBuilder
+from ..knowledge import KnowledgeService
 
 router = APIRouter()
+
+
+def _get_generation_service(request: Request) -> GenerationService:
+    service = getattr(request.app.state, "generation_service", None)
+    if not service or not service.available:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Generation service unavailable")
+    return service
+
+
+def _get_knowledge_service(request: Request) -> KnowledgeService | None:
+    service = getattr(request.app.state, "knowledge_service", None)
+    if service and service.available:
+        return service
+    return None
+
+
+def _compose_prompt(payload: SceneGenerateRequest, context: str) -> str:
+    parts: list[str] = ["[SCENE FRAME]"]
+    if payload.campaign_id:
+        parts.append(f"campaign_id: {payload.campaign_id}")
+    if payload.party_id:
+        parts.append(f"party_id: {payload.party_id}")
+    if payload.scene_id:
+        parts.append(f"scene_id: {payload.scene_id}")
+    parts.append("")
+    if context:
+        parts.append(context)
+        parts.append("")
+    parts.append("[REQUEST]")
+    parts.append(payload.prompt)
+    return "\n".join(parts)
+
+
+async def _generate_with_profile(profile: str, payload: SceneGenerateRequest, request: Request) -> dict[str, Any]:
+    generation_service = _get_generation_service(request)
+    if profile not in generation_service.profiles():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation profile not found")
+
+    knowledge_service = _get_knowledge_service(request)
+    context_builder = GenerationContextBuilder(knowledge_service)
+    context, used_items = await context_builder.build_scene_context(payload)
+    final_prompt = _compose_prompt(payload, context)
+
+    try:
+        result = generation_service.generate(profile, final_prompt)
+    except Exception as exc:  # pragma: no cover - тонкая обёртка над движком
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+    response = SceneGenerateResponse(
+        profile=profile,
+        result=result,
+        knowledge_items=[item.model_dump() for item in used_items],
+    )
+    return response.model_dump(by_alias=True)
 
 
 @router.get("/health", response_model=HealthPayload, tags=["system"])
@@ -24,7 +93,7 @@ def read_health(settings: Settings = Depends(get_settings)) -> HealthPayload:
 
 
 @router.get("/v1/knowledge/search", tags=["knowledge"])
-def search_knowledge(
+async def search_knowledge(
     request: Request,
     q: str = Query(..., min_length=2, alias="q"),
     top_k: int = Query(5, ge=1, le=20),
@@ -36,8 +105,111 @@ def search_knowledge(
     if not service or not service.available:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Knowledge search unavailable")
 
-    results = service.search(q, top_k=top_k)
+    results = await service.search(q, top_k=top_k)
     return {"items": [item.model_dump() for item in results]}
+
+
+@router.get("/v1/graph/scene", tags=["graph"])
+def graph_scene_context(
+    request: Request,
+    scene_id: str = Query(..., min_length=1),
+    campaign_id: str = Query("*"),
+    party_id: str = Query("*"),
+) -> dict[str, Any]:
+    """Возвращает графовый контекст сцены (GraphRAG)."""
+
+    service = getattr(request.app.state, "graph_service", None)
+    if not service:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GraphRAG unavailable")
+
+    if SceneGraphContextRequest is None or KnowledgeVersionRef is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GraphRAG not installed")
+
+    try:
+        req = SceneGraphContextRequest(
+            scene_id=scene_id,
+            campaign_id=campaign_id,
+            party_id=party_id,
+            version=KnowledgeVersionRef(alias="lore_latest"),
+        )
+        ctx = service.queries.scene_context(req)
+        return {
+            "degraded": ctx.degraded,
+            "summary": ctx.summary,
+            "nodes": ctx.nodes,
+            "relations": ctx.relations,
+        }
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+
+@router.get("/v1/graph/npc", tags=["graph"])
+def graph_npc_context(
+    request: Request,
+    npc_id: str = Query(..., min_length=1),
+    party_id: str = Query("*"),
+) -> dict[str, Any]:
+    service = getattr(request.app.state, "graph_service", None)
+    if not service:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GraphRAG unavailable")
+    if SceneGraphContextRequest is None or KnowledgeVersionRef is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GraphRAG not installed")
+    try:
+        ctx = service.queries.npc_social_context(npc_id, party_id, KnowledgeVersionRef(alias="lore_latest"))
+        return {
+            "degraded": ctx.degraded,
+            "summary": ctx.summary,
+            "nodes": ctx.nodes,
+            "relations": ctx.relations,
+        }
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+
+@router.get("/v1/graph/quest", tags=["graph"])
+def graph_quest_context(
+    request: Request,
+    quest_id: str = Query(..., min_length=1),
+) -> dict[str, Any]:
+    service = getattr(request.app.state, "graph_service", None)
+    if not service:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GraphRAG unavailable")
+    if SceneGraphContextRequest is None or KnowledgeVersionRef is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GraphRAG not installed")
+    try:
+        ctx = service.queries.quest_graph_context(quest_id, KnowledgeVersionRef(alias="lore_latest"))
+        return {
+            "degraded": ctx.degraded,
+            "summary": ctx.summary,
+            "nodes": ctx.nodes,
+            "relations": ctx.relations,
+        }
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+
+@router.get("/v1/graph/causal", tags=["graph"])
+def graph_causal_chain(
+    request: Request,
+    from_event_id: str = Query(..., min_length=1),
+    to_event_id: str | None = Query(None),
+    max_hops: int = Query(4, ge=1, le=6),
+) -> dict[str, Any]:
+    service = getattr(request.app.state, "graph_service", None)
+    if not service:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GraphRAG unavailable")
+    if KnowledgeVersionRef is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GraphRAG not installed")
+    try:
+        ctx = service.queries.causal_chain(from_event_id, to_event_id, KnowledgeVersionRef(alias="lore_latest"), max_hops=max_hops)
+        return {
+            "degraded": ctx.degraded,
+            "summary": ctx.summary,
+            "nodes": ctx.nodes,
+            "relations": ctx.relations,
+        }
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 
 @router.post("/v1/generation/{profile}", tags=["generation"])
@@ -85,6 +257,50 @@ def get_generation_profile(profile: str, request: Request) -> dict[str, Any]:
     except KeyError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation profile not found") from None
     return detail
+
+
+@router.post("/v1/generate/scene", tags=["generate"])
+async def generate_scene(
+    payload: SceneGenerateRequest,
+    request: Request,
+    _rl: None = Depends(rate_limit),
+) -> dict[str, Any]:
+    """Доменно ориентированная генерация сцены."""
+
+    return await _generate_with_profile("scene.v1", payload, request)
+
+
+@router.post("/v1/generate/combat", tags=["generate"])
+async def generate_combat(
+    payload: SceneGenerateRequest,
+    request: Request,
+    _rl: None = Depends(rate_limit),
+) -> dict[str, Any]:
+    """Генерация боевой сцены."""
+
+    return await _generate_with_profile("combat.v1", payload, request)
+
+
+@router.post("/v1/generate/social", tags=["generate"])
+async def generate_social(
+    payload: SceneGenerateRequest,
+    request: Request,
+    _rl: None = Depends(rate_limit),
+) -> dict[str, Any]:
+    """Генерация социального взаимодействия."""
+
+    return await _generate_with_profile("social.v1", payload, request)
+
+
+@router.post("/v1/generate/epilogue", tags=["generate"])
+async def generate_epilogue(
+    payload: SceneGenerateRequest,
+    request: Request,
+    _rl: None = Depends(rate_limit),
+) -> dict[str, Any]:
+    """Генерация эпилога."""
+
+    return await _generate_with_profile("epilogue.v1", payload, request)
 
 
 @router.post(

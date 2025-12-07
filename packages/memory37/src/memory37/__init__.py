@@ -9,6 +9,10 @@ from .embedding import TokenFrequencyEmbeddingProvider, OpenAIEmbeddingProvider
 from .rerankers import OpenAIChatRerankProvider
 from .ingest import load_knowledge_items_from_yaml
 from .etl import ETLPipeline
+from .versioning import KnowledgeAlias, KnowledgeVersion, KnowledgeVersionRegistry
+from .types import EpisodicSummary, NPCProfile, ArtCard, Chunk, GraphFact
+from .stores.base import VectorStore as CoreVectorStore, GraphStore
+from .stores.pgvector_store import PgVectorWrapper, InMemoryVectorStore
 
 __all__ = [
     "KnowledgeConfig",
@@ -32,4 +36,16 @@ __all__ = [
     "OpenAIChatRerankProvider",
     "ETLPipeline",
     "load_knowledge_items_from_yaml",
+    "KnowledgeVersion",
+    "KnowledgeAlias",
+    "KnowledgeVersionRegistry",
+    "EpisodicSummary",
+    "NPCProfile",
+    "ArtCard",
+    "Chunk",
+    "GraphFact",
+    "CoreVectorStore",
+    "GraphStore",
+    "PgVectorWrapper",
+    "InMemoryVectorStore",
 ]
