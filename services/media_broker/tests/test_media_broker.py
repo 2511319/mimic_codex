@@ -71,3 +71,22 @@ def test_idempotent_submission(monkeypatch: pytest.MonkeyPatch) -> None:
     assert resp_first.status_code == 202
     assert resp_second.status_code == 202
     assert resp_first.json()["jobId"] == resp_second.json()["jobId"]
+
+
+def test_hash_cache_without_client_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_VERSION", "1.0.0")
+    monkeypatch.setenv("PROCESSING_DELAY_MS", "0")
+    app = create_app()
+
+    request_body = {
+        "jobType": "tts",
+        "payload": {"text": "Repeatable job", "voice": "bard", "model": "stub"},
+    }
+
+    with TestClient(app) as client:
+        first = client.post("/v1/media/jobs", json=request_body)
+        second = client.post("/v1/media/jobs", json=request_body)
+
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert first.json()["jobId"] == second.json()["jobId"]

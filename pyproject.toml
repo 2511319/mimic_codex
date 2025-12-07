@@ -10,6 +10,7 @@ packages = [
     { include = "rpg_party_sync", from = "services/party_sync/src" },
     { include = "rpg_media_broker", from = "services/media_broker/src" },
     { include = "memory37", from = "packages/memory37/src" },
+    { include = "memory37_graph", from = "packages/memory37-graph/src" },
     { include = "genlayers", from = "packages/genlayers/src" },
     { include = "rpg_contracts", from = "packages/rpg_contracts/src" }
 ]

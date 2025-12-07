@@ -86,6 +86,36 @@ class Settings(BaseSettings):
         description="Размерность вектора",
         alias="KNOWLEDGE_VECTOR_DIMENSION",
     )
+    neo4j_uri: str | None = Field(
+        None,
+        description="Neo4j URI для GraphRAG (bolt://...)",
+        alias="NEO4J_URI",
+    )
+    neo4j_user: str | None = Field(
+        None,
+        description="Neo4j user",
+        alias="NEO4J_USER",
+    )
+    neo4j_password: str | None = Field(
+        None,
+        description="Neo4j password",
+        alias="NEO4J_PASSWORD",
+    )
+    neo4j_database: str | None = Field(
+        None,
+        description="Neo4j database name (optional)",
+        alias="NEO4J_DATABASE",
+    )
+    knowledge_version_id: str | None = Field(
+        None,
+        description="Идентификатор версии знаний (для фильтрации результатов)",
+        alias="KNOWLEDGE_VERSION_ID",
+    )
+    knowledge_version_alias: str | None = Field(
+        None,
+        description="Алиас версии знаний (например, lore_latest)",
+        alias="KNOWLEDGE_VERSION_ALIAS",
+    )
 
     # Rate limiting (optional, disabled by default)
     rate_limit_enabled: bool = Field(

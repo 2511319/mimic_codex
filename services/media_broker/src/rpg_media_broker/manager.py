@@ -6,6 +6,8 @@ import asyncio
 import logging
 from collections import OrderedDict
 from datetime import datetime, timezone
+import hashlib
+import json
 from typing import Dict
 from uuid import uuid4
 
@@ -22,6 +24,7 @@ class MediaJobManager:
         self._settings = settings
         self._jobs: "OrderedDict[str, MediaJobRecord]" = OrderedDict()
         self._jobs_by_token: Dict[str, str] = {}
+        self._jobs_by_hash: Dict[str, str] = {}
         self._queue: asyncio.Queue[str] = asyncio.Queue()
         self._lock = asyncio.Lock()
         self._workers: list[asyncio.Task[None]] = []
@@ -64,6 +67,13 @@ class MediaJobManager:
                     logger.debug("Returning existing job for token %s", request.client_token)
                     return self._jobs[existing_id]
 
+            job_hash = _job_hash(request.job_type, request.payload)
+            if job_hash:
+                existing_id = self._jobs_by_hash.get(job_hash)
+                if existing_id:
+                    logger.debug("Cache hit for media hash %s", job_hash)
+                    return self._jobs[existing_id]
+
             job_id = uuid4().hex
             record = MediaJobRecord(
                 jobId=job_id,  # type: ignore[arg-type]
@@ -75,6 +85,8 @@ class MediaJobManager:
             self._jobs[job_id] = record
             if request.client_token:
                 self._jobs_by_token[request.client_token] = job_id
+            if job_hash:
+                self._jobs_by_hash[job_hash] = job_id
             self._trim_history_locked()
 
         await self._queue.put(job_id)
@@ -164,6 +176,7 @@ class MediaJobManager:
                 self._jobs.pop(job_id, None)
                 if record.client_token:
                     self._jobs_by_token.pop(record.client_token, None)
+                _remove_hash_reference(self._jobs_by_hash, job_id)
                 if len(self._jobs) <= self._settings.job_history_limit:
                     break
 
@@ -174,3 +187,36 @@ class MediaJobManager:
 
 def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
+
+
+def _job_hash(job_type: str, payload: dict[str, object]) -> str:
+    if job_type == "tts":
+        key = {
+            "jobType": "tts",
+            "text": payload.get("text", ""),
+            "voice": payload.get("voice", "default"),
+            "speed": payload.get("speed", 1.0),
+            "model": payload.get("model", "default"),
+        }
+    elif job_type == "image":
+        key = {
+            "jobType": "image",
+            "prompt": payload.get("prompt", ""),
+            "style": payload.get("style", "concept"),
+            "seed": payload.get("seed", 0),
+            "width": payload.get("width", 1024),
+            "height": payload.get("height", 1024),
+            "model": payload.get("model", "default"),
+            "postproc": payload.get("postproc", "none"),
+        }
+    else:
+        return ""
+
+    raw = json.dumps(key, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _remove_hash_reference(index: Dict[str, str], job_id: str) -> None:
+    for key, value in list(index.items()):
+        if value == job_id:
+            index.pop(key, None)

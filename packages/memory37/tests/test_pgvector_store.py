@@ -60,7 +60,7 @@ def test_pgvector_store_upsert_executes_insert_sql(monkeypatch) -> None:
 
 
 def test_pgvector_store_query_returns_records(monkeypatch) -> None:
-    result_rows = [("kn_1", [0.1, 0.2, 0.3], {"domain": "scene"})]
+    result_rows = [("kn_1", [0.1, 0.2, 0.3], {"domain": "scene"}, None, None)]
     connection = FakeConnection(result_rows)
 
     def factory():

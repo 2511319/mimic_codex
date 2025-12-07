@@ -43,12 +43,18 @@ class HybridRetriever:
         embeddings = self.embedding_provider.embed([item.content for item in items], model=self.embedding_model)
         records: List[VectorRecord] = []
         for item, vector in zip(items, embeddings, strict=True):
-            records.append(VectorRecord(item_id=item.item_id, vector=vector, metadata={"domain": item.domain, **item.metadata}))
+            metadata = {"domain": item.domain, **item.metadata}
+            if item.knowledge_version_id:
+                metadata["knowledge_version_id"] = item.knowledge_version_id
+            records.append(VectorRecord(item_id=item.item_id, vector=vector, metadata=metadata))
         self.vector_store.upsert(records)
 
-    def query(self, text: str, *, top_k: int = 5) -> list[tuple[KnowledgeItem, float]]:
+    def query(self, text: str, *, top_k: int = 5, version_id: str | None = None, filters: dict | None = None) -> list[tuple[KnowledgeItem, float]]:
         query_embedding = self.embedding_provider.embed([text], model=self.embedding_model)[0]
-        vector_candidates = self.vector_store.query(query_embedding, top_k=top_k * 3)
+        metadata_filter = filters or {}
+        if version_id:
+            metadata_filter.setdefault("knowledge_version_id", version_id)
+        vector_candidates = self.vector_store.query(query_embedding, top_k=top_k * 3, metadata_filter=metadata_filter or None)
         query_terms = _tokenize(text)
 
         results: list[tuple[KnowledgeItem, float]] = []

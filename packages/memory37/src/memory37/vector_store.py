@@ -103,22 +103,32 @@ class PgVectorStore(VectorStore):
             self._ensure_schema(conn)
             insert_sql = sql.SQL(
                 """
-                INSERT INTO {table} (item_id, embedding, metadata)
-                VALUES (%s, %s::vector, %s::jsonb)
+                INSERT INTO {table} (item_id, embedding, metadata, knowledge_version_id, expires_at)
+                VALUES (%s, %s::vector, %s::jsonb, %s, %s)
                 ON CONFLICT (item_id) DO UPDATE
                 SET embedding = EXCLUDED.embedding,
-                    metadata = EXCLUDED.metadata
+                    metadata = EXCLUDED.metadata,
+                    knowledge_version_id = EXCLUDED.knowledge_version_id,
+                    expires_at = EXCLUDED.expires_at
                 """
             ).format(table=sql.Identifier(self._table))
 
             with conn.cursor() as cur:
                 for record in records:
+                    version = None
+                    if "knowledge_version_id" in record.metadata:
+                        version = record.metadata.get("knowledge_version_id")
+                    metadata = dict(record.metadata)
+                    metadata.pop("knowledge_version_id", None)
+                    expires_at = metadata.pop("expires_at", None)
                     cur.execute(
                         insert_sql,
                         (
                             record.item_id,
                             _format_vector_literal(record.vector),
-                            json.dumps(record.metadata),
+                            json.dumps(metadata),
+                            version,
+                            expires_at,
                         ),
                     )
             conn.commit()
@@ -142,7 +152,7 @@ class PgVectorStore(VectorStore):
 
             query_sql = sql.SQL(
                 """
-                SELECT item_id, embedding, metadata
+                SELECT item_id, embedding, metadata, knowledge_version_id, expires_at
                 FROM {table}
                 {where}
                 ORDER BY embedding <#> %s::vector
@@ -157,12 +167,16 @@ class PgVectorStore(VectorStore):
                 rows = cur.fetchall()
 
             results: list[VectorRecord] = []
-            for item_id, embedding, metadata in rows:
+            for item_id, embedding, metadata, version, expires_at in rows:
                 results.append(
                     VectorRecord(
                         item_id=item_id,
                         vector=_parse_vector(embedding),
-                        metadata=dict(metadata) if isinstance(metadata, dict) else json.loads(metadata),
+                        metadata={
+                            **(dict(metadata) if isinstance(metadata, dict) else json.loads(metadata)),
+                            **({"knowledge_version_id": version} if version else {}),
+                            **({"expires_at": expires_at} if expires_at else {}),
+                        },
                     )
                 )
             return results
@@ -179,7 +193,9 @@ class PgVectorStore(VectorStore):
                 CREATE TABLE IF NOT EXISTS {table} (
                     item_id TEXT PRIMARY KEY,
                     embedding vector({dimension}),
-                    metadata JSONB NOT NULL DEFAULT '{{}}'
+                    metadata JSONB NOT NULL DEFAULT '{{}}',
+                    knowledge_version_id TEXT NULL,
+                    expires_at TIMESTAMPTZ NULL
                 )
                 """
             ).format(
@@ -189,6 +205,21 @@ class PgVectorStore(VectorStore):
             cur.execute(create_table_sql)
         conn.commit()
         self._schema_initialized = True
+
+    def cleanup_expired(self) -> None:
+        """Удаляет записи с просроченным expires_at."""
+
+        conn = self._connection_factory()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        "DELETE FROM {table} WHERE expires_at IS NOT NULL AND expires_at < NOW()"
+                    ).format(table=sql.Identifier(self._table))
+                )
+            conn.commit()
+        finally:
+            conn.close()
 
 
 def _format_vector_literal(vector: Sequence[float]) -> str:

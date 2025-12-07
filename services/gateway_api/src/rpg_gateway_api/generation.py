@@ -43,7 +43,7 @@ class GenerationService:
         if profile not in self._config.profiles:
             raise KeyError(f"Unknown profile: {profile}")
         profile_cfg = self._config.profiles[profile]
-        schema = self._schema_loader.load(profile_cfg.response_schema)
+        schema = self._schema_loader.load_schema(profile_cfg.response_schema)
         return {
             "profile": profile,
             "temperature": profile_cfg.temperature,

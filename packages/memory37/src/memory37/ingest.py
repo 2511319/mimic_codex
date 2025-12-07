@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable, List
 
@@ -10,7 +11,7 @@ import yaml
 from .domain import ArtCard, KnowledgeItem, NpcProfile, SceneState
 
 
-def load_knowledge_items_from_yaml(path: str | Path) -> list[KnowledgeItem]:
+def load_knowledge_items_from_yaml(path: str | Path, *, knowledge_version_id: str | None = None, ttl_days: int | None = None) -> list[KnowledgeItem]:
     """Load knowledge items from YAML file with scenes, NPCs, and art sections."""
 
     file_path = Path(path)
@@ -22,14 +23,16 @@ def load_knowledge_items_from_yaml(path: str | Path) -> list[KnowledgeItem]:
         raise ValueError("Knowledge YAML root must be a mapping")
 
     items: list[KnowledgeItem] = []
+    expires_at = _expires_in_days(ttl_days)
+
     for scene in data.get("scenes", []) or []:
-        items.append(_scene_to_knowledge(scene))
+        items.append(_scene_to_knowledge(scene, knowledge_version_id, expires_at))
     for npc in data.get("npcs", []) or []:
-        items.append(_npc_to_knowledge(npc))
+        items.append(_npc_to_knowledge(npc, knowledge_version_id, expires_at))
     for art in data.get("art", []) or []:
-        items.append(_art_to_knowledge(art))
+        items.append(_art_to_knowledge(art, knowledge_version_id, expires_at))
     for lore in data.get("lore", []) or []:
-        items.append(_lore_to_knowledge(lore))
+        items.append(_lore_to_knowledge(lore, knowledge_version_id, expires_at))
 
     return items
 
@@ -85,7 +88,7 @@ def build_runtime_items(
     return items
 
 
-def _scene_to_knowledge(data: dict) -> KnowledgeItem:
+def _scene_to_knowledge(data: dict, version_id: str | None, expires_at: datetime | None) -> KnowledgeItem:
     scene_id = data.get("id") or data.get("scene_id")
     summary = data.get("summary", "")
     title = data.get("title", scene_id)
@@ -93,20 +96,34 @@ def _scene_to_knowledge(data: dict) -> KnowledgeItem:
     timeline = data.get("timeline", [])
     content = f"Scene {title}: {summary}. Timeline: {' | '.join(str(item) for item in timeline)}."
     metadata = {"scene_id": scene_id, "tags": ",".join(tags)}
-    return KnowledgeItem(item_id=f"scene::{scene_id}", domain="scene", content=content, metadata=metadata)
+    return KnowledgeItem(
+        item_id=f"scene::{scene_id}",
+        domain="scene",
+        content=content,
+        metadata=metadata,
+        knowledge_version_id=version_id,
+        expires_at=expires_at,
+    )
 
 
-def _npc_to_knowledge(data: dict) -> KnowledgeItem:
+def _npc_to_knowledge(data: dict, version_id: str | None, expires_at: datetime | None) -> KnowledgeItem:
     npc_id = data.get("id") or data.get("npc_id")
     name = data.get("name", npc_id)
     archetype = data.get("archetype", "")
     summary = data.get("summary", "")
     content = f"NPC {name} ({archetype}). {summary}"
     metadata = {"npc_id": npc_id, "voice_tts": data.get("voice_tts", "")}
-    return KnowledgeItem(item_id=f"npc::{npc_id}", domain="npc", content=content, metadata=metadata)
+    return KnowledgeItem(
+        item_id=f"npc::{npc_id}",
+        domain="npc",
+        content=content,
+        metadata=metadata,
+        knowledge_version_id=version_id,
+        expires_at=expires_at,
+    )
 
 
-def _art_to_knowledge(data: dict) -> KnowledgeItem:
+def _art_to_knowledge(data: dict, version_id: str | None, expires_at: datetime | None) -> KnowledgeItem:
     image_id = data.get("id") or data.get("image_id")
     prompt = data.get("prompt") or data.get("prompt_text", "")
     tags = data.get("tags", [])
@@ -114,10 +131,17 @@ def _art_to_knowledge(data: dict) -> KnowledgeItem:
     entities_str = ",".join(f"{k}:{','.join(vs)}" for k, vs in entities.items())
     content = f"Art {image_id}: {prompt}. Entities: {entities_str}."
     metadata = {"image_id": image_id, "tags": ",".join(tags)}
-    return KnowledgeItem(item_id=f"art::{image_id}", domain="art", content=content, metadata=metadata)
+    return KnowledgeItem(
+        item_id=f"art::{image_id}",
+        domain="art",
+        content=content,
+        metadata=metadata,
+        knowledge_version_id=version_id,
+        expires_at=expires_at,
+    )
 
 
-def _lore_to_knowledge(data: dict) -> KnowledgeItem:
+def _lore_to_knowledge(data: dict, version_id: str | None, expires_at: datetime | None) -> KnowledgeItem:
     """Convert a lore/reward entry to KnowledgeItem.
 
     Expected minimal structure:
@@ -144,4 +168,17 @@ def _lore_to_knowledge(data: dict) -> KnowledgeItem:
     if related_str:
         metadata["related"] = related_str
 
-    return KnowledgeItem(item_id=f"lore::{lore_id}", domain="lore", content=content, metadata=metadata)
+    return KnowledgeItem(
+        item_id=f"lore::{lore_id}",
+        domain="lore",
+        content=content,
+        metadata=metadata,
+        knowledge_version_id=version_id,
+        expires_at=expires_at,
+    )
+
+
+def _expires_in_days(ttl_days: int | None) -> datetime | None:
+    if not ttl_days or ttl_days <= 0:
+        return None
+    return datetime.utcnow() + timedelta(days=ttl_days)

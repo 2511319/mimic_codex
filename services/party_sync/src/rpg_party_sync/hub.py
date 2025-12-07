@@ -7,7 +7,7 @@ import logging
 from collections import deque
 from typing import Dict, Set
 
-from fastapi import WebSocket
+from fastapi import HTTPException, WebSocket, status
 from fastapi.websockets import WebSocketDisconnect
 from pydantic import ValidationError
 
@@ -28,7 +28,7 @@ class PartySession:
         self._settings = settings
         self._connections: Set[WebSocket] = set()
         self._lock = asyncio.Lock()
-        self._history: deque[HistoryEntry] = deque(maxlen=settings.broadcast_history_limit)
+        self._history: deque[HistoryEntry] = deque(maxlen=settings.history_limit)
 
     async def connect(self, websocket: WebSocket) -> None:
         """Register connection and replay backlog."""
@@ -43,16 +43,22 @@ class PartySession:
 
         await websocket.accept()
         await self._replay_history(websocket)
-        logger.debug("WebSocket joined campaign %s", id(self))
+        logger.debug("WebSocket joined campaign session=%s", id(self))
 
     async def disconnect(self, websocket: WebSocket) -> None:
         """Remove connection silently."""
 
         async with self._lock:
             self._connections.discard(websocket)
-        logger.debug("WebSocket left campaign %s", id(self))
+        logger.debug("WebSocket left campaign session=%s", id(self))
 
-    async def broadcast(self, message: BroadcastMessage, *, include_sender: bool) -> int:
+    async def broadcast(
+        self,
+        message: BroadcastMessage,
+        *,
+        include_sender: bool,
+        sender: WebSocket | None = None,
+    ) -> int:
         """Send message to connected peers and append to history."""
 
         payload = message.model_dump(by_alias=True)
@@ -63,9 +69,8 @@ class PartySession:
 
         for connection in connections:
             try:
-                if not include_sender and message.sender_id:
-                    # Sender filtering is handled by clients; here we broadcast to all.
-                    pass
+                if not include_sender and sender is not None and connection is sender:
+                    continue
                 await connection.send_json(payload)
                 deliveries += 1
             except RuntimeError as exc:
@@ -89,6 +94,12 @@ class PartySession:
                 logger.warning("Failed to replay history: %s", exc)
                 break
 
+    def connection_count(self) -> int:
+        return len(self._connections)
+
+    def history_size(self) -> int:
+        return len(self._history)
+
 
 class PartyHub:
     """Manages campaign sessions."""
@@ -102,9 +113,17 @@ class PartyHub:
         """Return existing session or create a new one."""
 
         async with self._lock:
-            if campaign_id not in self._sessions:
-                self._sessions[campaign_id] = PartySession(settings=self._settings)
-            return self._sessions[campaign_id]
+            existing = self._sessions.get(campaign_id)
+            if existing is not None:
+                return existing
+            if len(self._sessions) >= self._settings.max_campaigns:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Campaign limit reached",
+                )
+            session = PartySession(settings=self._settings)
+            self._sessions[campaign_id] = session
+            return session
 
     async def handle_connection(self, campaign_id: str, websocket: WebSocket) -> None:
         """Main loop for websocket connection."""
@@ -121,17 +140,18 @@ class PartyHub:
             while True:
                 data = await websocket.receive_json()
                 message = BroadcastMessage.model_validate(data)
-                await session.broadcast(message, include_sender=True)
+                await session.broadcast(message, include_sender=True, sender=websocket)
         except WebSocketDisconnect:
             logger.debug("Client disconnected from %s", campaign_id)
         except ValidationError as exc:
             logger.warning("Invalid message on campaign %s: %s", campaign_id, exc)
-            await websocket.close(code=1003, reason="Invalid message payload")
+            await websocket.close(code=1003, reason="Invalid payload")
         except Exception as exc:  # pylint: disable=broad-except
             logger.exception("Unexpected error in websocket loop: %s", exc)
             await websocket.close(code=1011, reason="Internal error")
         finally:
             await session.disconnect(websocket)
+            await self._maybe_cleanup_session(campaign_id, session)
 
     async def broadcast(self, campaign_id: str, message: BroadcastMessage) -> int:
         """Broadcast message to the campaign."""
@@ -145,3 +165,10 @@ class PartyHub:
             deliveries,
         )
         return deliveries
+
+    async def _maybe_cleanup_session(self, campaign_id: str, session: PartySession) -> None:
+        if session.connection_count() > 0 or session.history_size() > 0:
+            return
+        async with self._lock:
+            if session.connection_count() == 0 and session.history_size() == 0:
+                self._sessions.pop(campaign_id, None)

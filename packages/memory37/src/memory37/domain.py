@@ -79,8 +79,9 @@ class KnowledgeItem(BaseModel):
     """Generic knowledge chunk used for search indexing."""
 
     item_id: Annotated[str, Field(min_length=1)]
-    domain: Literal["scene", "npc", "art", "lore"]
+    domain: Literal["scene", "npc", "art", "lore", "srd", "quest", "event", "item"]
     content: Annotated[str, Field(min_length=1)]
+    knowledge_version_id: str | None = None
+    expires_at: datetime | None = None
     metadata: dict[str, str] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-

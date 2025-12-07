@@ -23,8 +23,8 @@ class StructuredGenerationEngine:
         self,
         *,
         config: GenerationConfig,
-        schema_loader: SchemaLoader,
         provider: LanguageModelProvider,
+        schema_loader: SchemaLoader,
         max_retries: int = 2,
     ) -> None:
         self._config = config
@@ -32,34 +32,28 @@ class StructuredGenerationEngine:
         self._provider = provider
         self._max_retries = max(0, max_retries)
 
-    def generate(self, profile_name: str, prompt: str) -> dict[str, Any]:
-        """Выполняет генерацию и гарантирует соответствие JSON Schema.
+    def generate(self, profile: str, prompt: str) -> dict[str, Any]:
+        """Генерирует payload согласно профилю и JSON Schema."""
 
-        Args:
-            profile_name: Имя профиля из конфигурации.
-            prompt: Исходный промпт.
+        try:
+            profile_cfg = self._config.require_profile(profile)
+        except KeyError as exc:
+            raise GenerationError(f"Unknown profile: {profile}", cause=exc) from exc
 
-        Returns:
-            dict[str, Any]: Десериализованный валидный ответ.
-
-        Raises:
-            GenerationError: Если провайдер не вернул корректный ответ.
-        """
-
-        profile = self._config.require_profile(profile_name)
-        schema = self._schema_loader.load(profile.response_schema)
-
-        attempt_prompt = prompt
+        schema = self._schema_loader.load_schema(profile_cfg.response_schema)
         last_error: Exception | None = None
 
         for attempt in range(self._max_retries + 1):
+            issue = last_error or Exception("previous attempt failed")
+            attempt_prompt = prompt if attempt == 0 else self._augment_prompt(prompt, issue)
+
             try:
                 raw = self._provider.generate(
                     prompt=attempt_prompt,
-                    temperature=profile.temperature,
-                    max_output_tokens=profile.max_output_tokens,
+                    temperature=profile_cfg.temperature,
+                    max_output_tokens=profile_cfg.max_output_tokens,
                     schema=schema,
-                    schema_name=profile.response_schema.replace(".json", "").replace("-", "_"),
+                    schema_name=profile_cfg.response_schema.replace(".json", "").replace("-", "_").replace(".", "_"),
                 )
             except GenerationError as exc:
                 logger.error("Ошибка провайдера на попытке %d: %s", attempt + 1, exc)
@@ -67,14 +61,9 @@ class StructuredGenerationEngine:
 
             try:
                 payload = json.loads(raw)
-            except json.JSONDecodeError as exc:
+            except Exception as exc:
                 last_error = exc
-                logger.warning(
-                    "Попытка %d: ответ не является JSON (%s). Повтор запроса.",
-                    attempt + 1,
-                    exc,
-                )
-                attempt_prompt = self._augment_prompt(prompt, exc)
+                logger.warning("Ответ LLM не является валидным JSON (attempt=%d): %s", attempt + 1, exc)
                 continue
 
             try:
@@ -82,18 +71,12 @@ class StructuredGenerationEngine:
                 return payload
             except jsonschema.ValidationError as exc:
                 last_error = exc
-                logger.warning(
-                    "Попытка %d: ответ не прошёл валидацию JSON Schema (%s).",
-                    attempt + 1,
-                    exc.message,
-                )
-                attempt_prompt = self._augment_prompt(prompt, exc)
+                logger.warning("Ответ не прошёл JSON Schema validation (attempt=%d): %s", attempt + 1, exc)
                 continue
 
-        raise GenerationError(
-            "Не удалось получить валидный JSON после повторных попыток.",
-            cause=last_error,
-        )
+        if last_error:
+            raise GenerationError("Не удалось получить валидный JSON после повторных попыток.", cause=last_error)
+        raise GenerationError("Не удалось получить валидный JSON после повторных попыток.")
 
     @staticmethod
     def _augment_prompt(prompt: str, issue: Exception) -> str:

@@ -25,6 +25,7 @@ from .generation import GenerationService
 from .config import get_settings
 from .version import __version__
 from .observability import setup_observability
+from .graph import init_graph_service
 
 
 def create_app() -> FastAPI:
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     )
     app.state.knowledge_service = KnowledgeService(settings)
     app.state.generation_service = GenerationService(settings)
+    app.state.graph_service = init_graph_service(settings)
 
     @app.middleware("http")
     async def inject_trace_id(request: Request, call_next):  # type: ignore[override]

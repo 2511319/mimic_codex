@@ -46,11 +46,16 @@ def _create_provider(settings: GenerationSettings) -> LanguageModelProvider:
         settings.openai_model,
         settings.openai_timeout,
     )
-    return OpenAIResponsesProvider(
-        model=settings.openai_model,
-        api_key=settings.openai_api_key,
-        timeout=settings.openai_timeout,
-    )
+    try:
+        return OpenAIResponsesProvider(
+            model=settings.openai_model,
+            api_key=settings.openai_api_key,
+            timeout=settings.openai_timeout,
+        )
+    except GenerationError as exc:
+        raise GenerationError("OpenAI SDK is not installed or misconfigured", cause=exc) from exc
+    except Exception as exc:  # pragma: no cover - защитное перекрытие нестандартных ошибок SDK
+        raise GenerationError("OpenAI SDK is not installed or misconfigured", cause=exc) from exc
 
 
 def _resolve_path(path: Path) -> Path:

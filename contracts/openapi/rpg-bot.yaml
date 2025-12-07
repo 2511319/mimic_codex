@@ -17,6 +17,12 @@ tags:
     description: Authentication flows for Telegram Mini App.
   - name: system
     description: Operational endpoints exposing health and configuration.
+  - name: knowledge
+    description: Knowledge search powered by Memory37.
+  - name: generation
+    description: Low-level structured generation endpoints.
+  - name: generate
+    description: Domain-level generation endpoints using Memory37 context.
 paths:
   /v1/auth/telegram:
     post:
@@ -58,6 +64,168 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+  /v1/knowledge/search:
+    get:
+      summary: Search knowledge base
+      tags: [knowledge]
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - in: query
+          name: top_k
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+          description: Number of results to return
+      responses:
+        "200":
+          description: Knowledge search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/KnowledgeItem"
+  /v1/generation/{profile}:
+    post:
+      summary: Structured generation by profile
+      tags: [generation]
+      parameters:
+        - in: path
+          name: profile
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerationRequest"
+      responses:
+        "200":
+          description: Generation payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerationResponse"
+        "404":
+          description: Profile not found
+        "503":
+          description: Service unavailable
+  /v1/generation/profiles:
+    get:
+      summary: List generation profiles
+      tags: [generation]
+      responses:
+        "200":
+          description: Available profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerationProfiles"
+        "503":
+          description: Service unavailable
+  /v1/generation/profiles/{profile}:
+    get:
+      summary: Profile detail
+      tags: [generation]
+      parameters:
+        - in: path
+          name: profile
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Profile detail including response schema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerationProfileDetail"
+        "404":
+          description: Profile not found
+        "503":
+          description: Service unavailable
+  /v1/generate/scene:
+    post:
+      summary: Generate scene content
+      tags: [generate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SceneGenerateRequest"
+      responses:
+        "200":
+          description: Structured scene payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneGenerateResponse"
+        "503":
+          description: Generation unavailable
+  /v1/generate/combat:
+    post:
+      summary: Generate combat content
+      tags: [generate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SceneGenerateRequest"
+      responses:
+        "200":
+          description: Structured combat payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneGenerateResponse"
+  /v1/generate/social:
+    post:
+      summary: Generate social interaction
+      tags: [generate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SceneGenerateRequest"
+      responses:
+        "200":
+          description: Structured social payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneGenerateResponse"
+  /v1/generate/epilogue:
+    post:
+      summary: Generate epilogue content
+      tags: [generate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SceneGenerateRequest"
+      responses:
+        "200":
+          description: Structured epilogue payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneGenerateResponse"
 components:
   schemas:
     Health:
@@ -81,3 +249,75 @@ components:
               type: string
             message:
               type: string
+    GenerationRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 2
+    GenerationResponse:
+      type: object
+      required: [profile, result]
+      properties:
+        profile:
+          type: string
+        result:
+          type: object
+    GenerationProfiles:
+      type: object
+      properties:
+        profiles:
+          type: array
+          items:
+            type: string
+    GenerationProfileDetail:
+      type: object
+      properties:
+        profile:
+          type: string
+        temperature:
+          type: number
+        maxOutputTokens:
+          type: integer
+        responseSchema:
+          type: object
+    KnowledgeItem:
+      type: object
+      required: [item_id, score, content_snippet, metadata]
+      properties:
+        item_id:
+          type: string
+        score:
+          type: number
+        content_snippet:
+          type: string
+        metadata:
+          type: object
+    SceneGenerateRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 2
+        campaignId:
+          type: string
+        partyId:
+          type: string
+        sceneId:
+          type: string
+        language:
+          type: string
+    SceneGenerateResponse:
+      type: object
+      required: [profile, result, knowledgeItems]
+      properties:
+        profile:
+          type: string
+        result:
+          $ref: ../jsonschema/scene_response.schema.json
+        knowledgeItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/KnowledgeItem"

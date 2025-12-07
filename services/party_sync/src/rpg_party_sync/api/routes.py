@@ -58,7 +58,17 @@ async def broadcast_event(
     """Broadcast event to all connected peers."""
 
     hub = get_hub(request)
-    deliveries = await hub.broadcast(campaign_id, request_body)
+    if request_body.campaign_id != campaign_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="campaignId mismatch",
+        )
+    message = request_body.message
+    if message.trace_id is None:
+        trace_id = getattr(request.state, "trace_id", None)
+        if trace_id:
+            message.trace_id = trace_id
+    deliveries = await hub.broadcast(campaign_id, message)
     return BroadcastAck(accepted=True, delivered=deliveries)
 
 

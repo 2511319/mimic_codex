@@ -22,6 +22,14 @@ class ETLPipeline:
         embeddings = self.embedding_provider.embed(texts, model=self.embedding_model)
         records: list[VectorRecord] = []
         for item, vector in zip(items, embeddings, strict=True):
-            metadata = {"domain": item.domain, **item.metadata, "content": item.content}
+            metadata = {
+                "domain": item.domain,
+                **item.metadata,
+                "content": item.content,
+            }
+            if item.knowledge_version_id:
+                metadata["knowledge_version_id"] = item.knowledge_version_id
+            if item.expires_at:
+                metadata["expires_at"] = item.expires_at.isoformat()
             records.append(VectorRecord(item_id=item.item_id, vector=vector, metadata=metadata))
         self.vector_store.upsert(records)
