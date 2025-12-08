@@ -29,7 +29,7 @@ def get_data_store(request: Request) -> DataStoreProtocol:
 def get_current_player(
     request: Request,
     settings: Settings = Depends(get_settings),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ):
     token = _extract_token(request)
     try:
