@@ -80,6 +80,9 @@ class MediaJobManager:
                 jobType=request.job_type,
                 payload=request.payload,
                 status="queued",
+                contentId=request.content_id,
+                campaignRunId=request.campaign_run_id,
+                sceneId=request.scene_id,
                 clientToken=request.client_token,
             )
             self._jobs[job_id] = record
@@ -128,6 +131,7 @@ class MediaJobManager:
             async with self._lock:
                 record.status = "succeeded"
                 record.result = result
+                record.result_url = _extract_result_url(result)
                 record.error = None
                 record.updated_at = _now()
         except Exception as exc:  # pylint: disable=broad-except
@@ -214,6 +218,16 @@ def _job_hash(job_type: str, payload: dict[str, object]) -> str:
 
     raw = json.dumps(key, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def _extract_result_url(result: dict[str, str | int | float] | None) -> str | None:
+    if not result:
+        return None
+    for key in ("cdnUrl", "audioUrl", "resultUrl"):
+        value = result.get(key)
+        if isinstance(value, str):
+            return value
+    return None
 
 
 def _remove_hash_reference(index: Dict[str, str], job_id: str) -> None:

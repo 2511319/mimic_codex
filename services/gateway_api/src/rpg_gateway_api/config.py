@@ -150,6 +150,11 @@ class Settings(BaseSettings):
         description="Base URL для party_sync (например, http://localhost:8001)",
         alias="PARTY_SYNC_BASE_URL",
     )
+    party_sync_redis_url: str | None = Field(
+        None,
+        description="Redis DSN для party_sync pub/sub (например, redis://localhost:6379/0)",
+        alias="PARTY_SYNC_REDIS_URL",
+    )
 
 
 class HealthPayload(BaseModel):
