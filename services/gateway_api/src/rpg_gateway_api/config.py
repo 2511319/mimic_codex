@@ -116,6 +116,11 @@ class Settings(BaseSettings):
         description="Алиас версии знаний (например, lore_latest)",
         alias="KNOWLEDGE_VERSION_ALIAS",
     )
+    database_url: str | None = Field(
+        None,
+        description="PostgreSQL DSN для основного хранилища (опционально, по умолчанию in-memory)",
+        alias="DATABASE_URL",
+    )
 
     # Rate limiting (optional, disabled by default)
     rate_limit_enabled: bool = Field(
@@ -134,6 +139,11 @@ class Settings(BaseSettings):
         ge=1,
         description="Burst capacity for token bucket",
         alias="RATE_LIMIT_BURST",
+    )
+    party_sync_base_url: str | None = Field(
+        None,
+        description="Base URL для party_sync (например, http://localhost:8001)",
+        alias="PARTY_SYNC_BASE_URL",
     )
 
 

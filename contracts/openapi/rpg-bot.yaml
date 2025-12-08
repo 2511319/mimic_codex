@@ -226,6 +226,303 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SceneGenerateResponse"
+  /v1/me:
+    get:
+      summary: Current player profile
+      tags: [players]
+      responses:
+        "200":
+          description: Player profile with characters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: Unauthorized
+  /v1/characters:
+    get:
+      summary: List characters for current player
+      tags: [characters]
+      responses:
+        "200":
+          description: Characters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Character"
+        "401":
+          description: Unauthorized
+    post:
+      summary: Create character
+      tags: [characters]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CharacterCreateRequest"
+      responses:
+        "201":
+          description: Created character
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+        "401":
+          description: Unauthorized
+  /v1/characters/{characterId}:
+    patch:
+      summary: Update character
+      tags: [characters]
+      parameters:
+        - in: path
+          name: characterId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CharacterUpdateRequest"
+      responses:
+        "200":
+          description: Updated character
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+  /v1/characters/{characterId}/retire:
+    post:
+      summary: Retire character
+      tags: [characters]
+      parameters:
+        - in: path
+          name: characterId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Retired character
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+  /v1/parties:
+    get:
+      summary: List parties for current player
+      tags: [parties]
+      responses:
+        "200":
+          description: Parties
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Party"
+        "401":
+          description: Unauthorized
+    post:
+      summary: Create party
+      tags: [parties]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartyCreateRequest"
+      responses:
+        "201":
+          description: Created party
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Party"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Character not found
+        "403":
+          description: Forbidden
+  /v1/parties/{partyId}/join:
+    post:
+      summary: Join party
+      tags: [parties]
+      parameters:
+        - in: path
+          name: partyId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartyMemberRequest"
+      responses:
+        "200":
+          description: Joined
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+  /v1/parties/{partyId}/leave:
+    post:
+      summary: Leave party
+      tags: [parties]
+      parameters:
+        - in: path
+          name: partyId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartyMemberRequest"
+      responses:
+        "200":
+          description: Left
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+  /v1/campaigns:
+    get:
+      summary: List available campaign templates
+      tags: [campaigns]
+      responses:
+        "200":
+          description: Campaign templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CampaignTemplate"
+  /v1/campaign-runs:
+    post:
+      summary: Start campaign run
+      tags: [campaigns]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignRunCreateRequest"
+      responses:
+        "201":
+          description: Campaign run started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignRun"
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+  /v1/campaign-runs/{runId}:
+    get:
+      summary: Get campaign run state
+      tags: [campaigns]
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Campaign run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignRun"
+        "404":
+          description: Not found
+  /v1/campaign-runs/{runId}/action:
+    post:
+      summary: Apply player action
+      tags: [campaigns]
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignActionRequest"
+      responses:
+        "200":
+          description: Updated run state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignRun"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+  /v1/campaign-runs/{runId}/summary:
+    get:
+      summary: Get campaign summary and retcon package
+      tags: [campaigns]
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Adventure summary and retcon package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignSummaryResponse"
+        "404":
+          description: Not found
 components:
   schemas:
     Health:
@@ -321,3 +618,131 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/KnowledgeItem"
+    PlayerProfile:
+      type: object
+      required: [id, telegramId, displayName, createdAt, lastLoginAt]
+      properties:
+        id: { type: integer }
+        telegramId: { type: integer }
+        displayName: { type: string }
+        settings: { type: object }
+        createdAt: { type: string, format: date-time }
+        lastLoginAt: { type: string, format: date-time }
+    Character:
+      type: object
+      required: [id, playerId, name, archetype, level, xp, status, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        playerId: { type: integer }
+        name: { type: string }
+        archetype: { type: string }
+        race: { type: string, nullable: true }
+        level: { type: integer }
+        xp: { type: integer }
+        coreStats: { type: object }
+        skills: { type: object }
+        inventoryRef: { type: string, nullable: true }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CharacterCreateRequest:
+      type: object
+      required: [name, archetype]
+      properties:
+        name: { type: string }
+        archetype: { type: string }
+        race: { type: string }
+        coreStats: { type: object }
+        skills: { type: object }
+    CharacterUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        archetype: { type: string }
+        race: { type: string }
+    Party:
+      type: object
+      required: [id, leaderCharacterId, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        leaderCharacterId: { type: integer }
+        activeCampaignRunId: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    PartyCreateRequest:
+      type: object
+      required: [leaderCharacterId]
+      properties:
+        name: { type: string }
+        leaderCharacterId: { type: integer }
+    PartyMemberRequest:
+      type: object
+      required: [characterId]
+      properties:
+        characterId: { type: integer }
+    MeResponse:
+      type: object
+      required: [player, characters]
+      properties:
+        player:
+          $ref: "#/components/schemas/PlayerProfile"
+        characters:
+          type: array
+          items:
+            $ref: "#/components/schemas/Character"
+    CampaignTemplate:
+      type: object
+      required: [id, title, description, seasonVersion]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        seasonVersion: { type: string }
+        metadata: { type: object }
+    SceneState:
+      type: object
+      required: [id, episodeId, sceneOrder, sceneType, generatedPayload, resolved, resultFlags]
+      properties:
+        id: { type: string }
+        episodeId: { type: string }
+        sceneOrder: { type: integer }
+        sceneType: { type: string }
+        profile: { type: string }
+        generatedPayload: { type: object }
+        resolved: { type: boolean }
+        resultFlags: { type: object }
+    CampaignRun:
+      type: object
+      required: [id, campaignTemplateId, partyId, status, createdAt]
+      properties:
+        id: { type: string }
+        campaignTemplateId: { type: string }
+        partyId: { type: integer }
+        status: { type: string }
+        currentEpisodeId: { type: string }
+        currentSceneId: { type: string }
+        createdAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        currentScene:
+          $ref: "#/components/schemas/SceneState"
+    CampaignRunCreateRequest:
+      type: object
+      required: [campaignTemplateId, partyId]
+      properties:
+        campaignTemplateId: { type: string }
+        partyId: { type: integer }
+        characterIds:
+          type: array
+          items: { type: integer }
+    CampaignActionRequest:
+      type: object
+      required: [actionType]
+      properties:
+        actionType: { type: string }
+        payload: { type: object }
+    CampaignSummaryResponse:
+      type: object
+      required: [adventureSummary, retconPackage]
+      properties:
+        adventureSummary: { type: object }
+        retconPackage: { type: object }
