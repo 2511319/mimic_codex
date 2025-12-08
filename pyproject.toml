@@ -12,7 +12,8 @@ packages = [
     { include = "memory37", from = "packages/memory37/src" },
     { include = "memory37_graph", from = "packages/memory37-graph/src" },
     { include = "genlayers", from = "packages/genlayers/src" },
-    { include = "rpg_contracts", from = "packages/rpg_contracts/src" }
+    { include = "rpg_contracts", from = "packages/rpg_contracts/src" },
+    { include = "retcon_engine", from = "packages/retcon_engine/src" }
 ]
 
 [tool.poetry.dependencies]
