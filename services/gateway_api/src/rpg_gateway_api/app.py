@@ -20,9 +20,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
 
 from .api.routes import router
+from .data import InMemoryDataStore, PostgresDataStore
+from .campaign import CampaignEngine
 from .knowledge import KnowledgeService
 from .generation import GenerationService
 from .config import get_settings
+from .party_sync_client import PartySyncClient
 from .version import __version__
 from .observability import setup_observability
 from .graph import init_graph_service
@@ -54,6 +57,15 @@ def create_app() -> FastAPI:
     app.state.knowledge_service = KnowledgeService(settings)
     app.state.generation_service = GenerationService(settings)
     app.state.graph_service = init_graph_service(settings)
+    if settings.database_url:
+        app.state.data_store = PostgresDataStore(settings.database_url)
+    else:
+        app.state.data_store = InMemoryDataStore()
+    party_sync_client = None
+    if getattr(settings, "party_sync_base_url", None):
+        party_sync_client = PartySyncClient(settings.party_sync_base_url)  # type: ignore[arg-type]
+    app.state.party_sync_client = party_sync_client
+    app.state.campaign_engine = CampaignEngine(app.state.data_store, app.state.generation_service, notifier=party_sync_client)
 
     @app.middleware("http")
     async def inject_trace_id(request: Request, call_next):  # type: ignore[override]
