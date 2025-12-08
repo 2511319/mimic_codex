@@ -57,10 +57,20 @@ def create_app() -> FastAPI:
     app.state.knowledge_service = KnowledgeService(settings)
     app.state.generation_service = GenerationService(settings)
     app.state.graph_service = init_graph_service(settings)
+
+    data_store = None
     if settings.database_url:
-        app.state.data_store = PostgresDataStore(settings.database_url)
-    else:
-        app.state.data_store = InMemoryDataStore()
+        try:
+            data_store = PostgresDataStore(settings.database_url)
+        except Exception as exc:  # pragma: no cover - зависит от окружения
+            logging.getLogger(__name__).warning(
+                "Postgres недоступен (%s), откатываемся на in-memory", exc
+            )
+            if not settings.database_fallback_to_memory:
+                raise
+    if data_store is None:
+        data_store = InMemoryDataStore()
+    app.state.data_store = data_store
     party_sync_client = None
     if getattr(settings, "party_sync_base_url", None):
         party_sync_client = PartySyncClient(settings.party_sync_base_url)  # type: ignore[arg-type]

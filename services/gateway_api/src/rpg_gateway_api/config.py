@@ -121,6 +121,11 @@ class Settings(BaseSettings):
         description="PostgreSQL DSN для основного хранилища (опционально, по умолчанию in-memory)",
         alias="DATABASE_URL",
     )
+    database_fallback_to_memory: bool = Field(
+        True,
+        description="Разрешить откат на in-memory хранилище при недоступности Postgres",
+        alias="DATABASE_FALLBACK_TO_MEMORY",
+    )
 
     # Rate limiting (optional, disabled by default)
     rate_limit_enabled: bool = Field(
