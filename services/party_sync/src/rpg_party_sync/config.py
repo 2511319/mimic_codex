@@ -15,6 +15,16 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     api_version: str = Field("1.0.0", description="Semantic version returned by health endpoints.")
+    redis_url: str = Field(
+        "redis://localhost:6379/0",
+        alias="REDIS_URL",
+        description="Redis connection string for pub/sub bus.",
+    )
+    ws_api_key: str | None = Field(
+        default=None,
+        alias="WS_API_KEY",
+        description="Static bearer token for WebSocket authentication.",
+    )
     max_connections_per_campaign: int = Field(
         32,
         ge=1,
@@ -30,6 +40,11 @@ class Settings(BaseSettings):
         1000,
         ge=1,
         description="Max number of campaigns to track in memory.",
+    )
+    action_dedupe_limit: int = Field(
+        500,
+        ge=1,
+        description="Max number of actionIds remembered for idempotency per channel.",
     )
 
     # Optional in-app rate limit (dev/staging)

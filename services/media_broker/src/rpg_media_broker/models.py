@@ -19,6 +19,9 @@ class MediaJobRequest(BaseModel):
 
     job_type: MediaJobType = Field(..., alias="jobType")
     payload: dict[str, Any] = Field(...)
+    content_id: str | None = Field(default=None, alias="contentId")
+    campaign_run_id: str | None = Field(default=None, alias="campaignRunId")
+    scene_id: str | None = Field(default=None, alias="sceneId")
     client_token: str | None = Field(
         default=None,
         alias="clientToken",
@@ -34,9 +37,13 @@ class MediaJobRecord(BaseModel):
     payload: dict[str, Any]
     status: MediaJobStatus
     result: dict[str, Any] | None = None
+    result_url: str | None = Field(default=None, alias="resultUrl")
     error: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc), alias="createdAt")
     updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc), alias="updatedAt")
+    content_id: str | None = Field(default=None, alias="contentId")
+    campaign_run_id: str | None = Field(default=None, alias="campaignRunId")
+    scene_id: str | None = Field(default=None, alias="sceneId")
     client_token: str | None = Field(default=None, alias="clientToken")
 
     model_config = ConfigDict(populate_by_name=True)
@@ -51,9 +58,13 @@ class MediaJobResponse(BaseModel):
     job_type: MediaJobType = Field(..., alias="jobType")
     status: MediaJobStatus
     result: dict[str, Any] | None = None
+    result_url: str | None = Field(default=None, alias="resultUrl")
     error: str | None = None
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
+    content_id: str | None = Field(default=None, alias="contentId")
+    campaign_run_id: str | None = Field(default=None, alias="campaignRunId")
+    scene_id: str | None = Field(default=None, alias="sceneId")
     client_token: str | None = Field(default=None, alias="clientToken")
 
     @classmethod

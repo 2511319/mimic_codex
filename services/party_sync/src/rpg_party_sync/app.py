@@ -8,6 +8,7 @@ import json
 import logging
 import logging.config
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,17 +22,29 @@ from .observability import setup_observability
 
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    _setup_logging()
+    settings = get_settings()
+    hub = PartyHub(settings=settings)
+    await hub.start()
+    app.state.hub = hub
+    try:
+        yield
+    finally:
+        await hub.stop()
+
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
 
-    _setup_logging()
     settings = get_settings()
     app = FastAPI(
         title="RPG-Bot Party Sync",
         version=__version__,
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=_lifespan,
     )
     setup_observability(app, service_name="party-sync")
     app.add_middleware(
@@ -42,7 +55,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.state.hub = PartyHub(settings=settings)
     app.include_router(router)
 
     @app.middleware("http")

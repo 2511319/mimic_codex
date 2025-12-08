@@ -6,6 +6,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, WebSocket
+from fastapi.websockets import WebSocketDisconnect
 from pydantic import ValidationError
 
 from ..config import HealthPayload, Settings, get_settings
@@ -34,6 +35,23 @@ def get_hub_for_ws(websocket: WebSocket) -> PartyHub:
     """Fetch party hub for WebSocket connections."""
 
     return _get_hub_from_app(websocket.app)
+
+
+def _resolve_channel(scope: str, entity_id: str) -> str:
+    if scope not in {"party", "run"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported scope")
+    return f"{scope}:{entity_id}"
+
+
+async def _authorize(websocket: WebSocket) -> None:
+    settings = get_settings()
+    if not settings.ws_api_key:
+        return
+    auth_header = websocket.headers.get("authorization") or ""
+    token = auth_header.split(" ")[-1] if auth_header.lower().startswith("bearer ") else websocket.query_params.get("token")
+    if token != settings.ws_api_key:
+        await websocket.close(code=4401, reason="Unauthorized")
+        raise WebSocketDisconnect()
 
 
 @router.get("/health", response_model=HealthPayload, tags=["system"])
@@ -68,23 +86,36 @@ async def broadcast_event(
         trace_id = getattr(request.state, "trace_id", None)
         if trace_id:
             message.trace_id = trace_id
-    deliveries = await hub.broadcast(campaign_id, message)
+    channel = message.channel or f"run:{campaign_id}"
+    deliveries = await hub.publish(channel, message)
     return BroadcastAck(accepted=True, delivered=deliveries)
 
 
-@router.websocket("/ws/campaign/{campaign_id}")
-async def campaign_ws(
+@router.websocket("/ws/{scope}/{entity_id}")
+async def channel_ws(
     websocket: WebSocket,
-    campaign_id: str,
+    scope: str,
+    entity_id: str,
 ) -> None:
-    """Handle WebSocket connections for campaign updates."""
+    """Handle WebSocket connections for party/run channels."""
 
+    await _authorize(websocket)
     hub = get_hub_for_ws(websocket)
     try:
-        await hub.handle_connection(campaign_id, websocket)
+        channel = _resolve_channel(scope, entity_id)
+        await hub.handle_connection(channel, websocket)
     except ValidationError as exc:
         logger.warning("Validation error on websocket message: %s", exc)
         await websocket.close(code=1003, reason="Invalid payload")
     except HTTPException as exc:
         logger.warning("HTTP exception inside websocket handler: %s", exc)
         await websocket.close(code=1011, reason="Internal error")
+    except WebSocketDisconnect:
+        return
+
+
+@router.websocket("/ws/campaign/{campaign_id}")
+async def legacy_campaign_ws(websocket: WebSocket, campaign_id: str) -> None:
+    """Legacy endpoint kept for backward compatibility."""
+
+    await channel_ws(websocket, scope="run", entity_id=campaign_id)

@@ -26,6 +26,7 @@ from .knowledge import KnowledgeService
 from .generation import GenerationService
 from .config import get_settings
 from .party_sync_client import PartySyncClient
+from .party_sync_bus import PartySyncBus, ActionListener, PartySyncNotifier
 from .version import __version__
 from .observability import setup_observability
 from .graph import init_graph_service
@@ -79,10 +80,17 @@ def create_app() -> FastAPI:
         data_store = InMemoryDataStore()
     app.state.data_store = data_store
     party_sync_client = None
-    if getattr(settings, "party_sync_base_url", None):
+    party_sync_bus = None
+    notifier = None
+    if getattr(settings, "party_sync_redis_url", None):
+        party_sync_bus = PartySyncBus(settings.party_sync_redis_url)  # type: ignore[arg-type]
+        notifier = PartySyncNotifier(party_sync_bus)
+    elif getattr(settings, "party_sync_base_url", None):
         party_sync_client = PartySyncClient(settings.party_sync_base_url)  # type: ignore[arg-type]
+        notifier = party_sync_client
     app.state.party_sync_client = party_sync_client
-    app.state.campaign_engine = CampaignEngine(app.state.data_store, app.state.generation_service, notifier=party_sync_client)
+    app.state.party_sync_bus = party_sync_bus
+    app.state.campaign_engine = CampaignEngine(app.state.data_store, app.state.generation_service, notifier=notifier)
 
     @app.middleware("http")
     async def inject_trace_id(request: Request, call_next):  # type: ignore[override]
@@ -168,6 +176,24 @@ def create_app() -> FastAPI:
                 # не препятствуем ответу при ошибке логирования
                 pass
     app.include_router(router)
+
+    @app.on_event("startup")
+    async def _start_party_sync_bus() -> None:
+        bus = getattr(app.state, "party_sync_bus", None)
+        if bus:
+            await bus.start()
+            listener = ActionListener(bus, app.state.campaign_engine)
+            await listener.start()
+            app.state.party_action_listener = listener
+
+    @app.on_event("shutdown")
+    async def _stop_party_sync_bus() -> None:
+        listener = getattr(app.state, "party_action_listener", None)
+        if listener:
+            await listener.stop()
+        bus = getattr(app.state, "party_sync_bus", None)
+        if bus:
+            await bus.stop()
 
     @app.get("/config", tags=["system"])
     def read_config_version(request: Request) -> dict[str, str]:

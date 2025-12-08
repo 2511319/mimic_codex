@@ -28,6 +28,15 @@ class BroadcastMessage(BaseModel):
         alias="senderId",
         description="Logical sender (playerId, gmId, service).",
     )
+    action_id: str | None = Field(
+        default=None,
+        alias="actionId",
+        description="Idempotency token for action.* events.",
+    )
+    channel: str | None = Field(
+        default=None,
+        description="Explicit channel name (party:<id> / run:<id>) for Redis pub/sub.",
+    )
 
 
 class BroadcastRequest(BaseModel):

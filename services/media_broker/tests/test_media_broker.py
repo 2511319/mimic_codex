@@ -5,6 +5,7 @@ from typing import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from typing import Iterator
 
 from rpg_media_broker.app import create_app
 from rpg_media_broker.config import get_settings
@@ -51,6 +52,7 @@ def test_job_lifecycle(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result is not None
     result_payload = result.json()["result"]
     assert result_payload["cdnUrl"].endswith(".webp")
+    assert result.json().get("resultUrl") == result_payload["cdnUrl"]
 
 
 def test_idempotent_submission(monkeypatch: pytest.MonkeyPatch) -> None:
