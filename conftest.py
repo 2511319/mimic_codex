@@ -48,6 +48,7 @@ def _collect_src_paths(root: Path) -> list[Path]:
         root / "packages" / "memory37" / "src",
         root / "packages" / "genlayers" / "src",
         root / "packages" / "rpg_contracts" / "src",
+        root / "packages" / "retcon_engine" / "src",
     ]
     return [p for p in candidates if p.exists()]
 

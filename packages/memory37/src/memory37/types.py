@@ -64,7 +64,20 @@ class Chunk(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str
-    domain: Literal["srd", "lore", "episode", "art", "scene", "npc", "quest", "event", "item"]
+    domain: Literal[
+        "srd",
+        "lore",
+        "episode",
+        "art",
+        "scene",
+        "npc",
+        "quest",
+        "event",
+        "item",
+        "lore_canon",
+        "world_perception",
+        "world_meta",
+    ]
     text: str
     payload: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
