@@ -122,8 +122,8 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
     database_fallback_to_memory: bool = Field(
-        True,
-        description="Разрешить откат на in-memory хранилище при недоступности Postgres",
+        False,
+        description="Разрешить откат на in-memory хранилище при недоступности Postgres (dev/test)",
         alias="DATABASE_FALLBACK_TO_MEMORY",
     )
 

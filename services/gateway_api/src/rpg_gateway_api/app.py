@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
 
 from .api.routes import router
-from .data import InMemoryDataStore, PostgresDataStore
+from .data import DataStoreProtocol, InMemoryDataStore, PostgresDataStore
 from .campaign import CampaignEngine
 from .knowledge import KnowledgeService
 from .generation import GenerationService
@@ -58,17 +58,24 @@ def create_app() -> FastAPI:
     app.state.generation_service = GenerationService(settings)
     app.state.graph_service = init_graph_service(settings)
 
-    data_store = None
+    data_store: DataStoreProtocol | None = None
     if settings.database_url:
         try:
             data_store = PostgresDataStore(settings.database_url)
         except Exception as exc:  # pragma: no cover - зависит от окружения
+            if not settings.database_fallback_to_memory:
+                raise
             logging.getLogger(__name__).warning(
                 "Postgres недоступен (%s), откатываемся на in-memory", exc
             )
-            if not settings.database_fallback_to_memory:
-                raise
+    elif not settings.database_fallback_to_memory:
+        raise RuntimeError(
+            "DATABASE_URL не задан, а откат на in-memory запрещен (DATABASE_FALLBACK_TO_MEMORY=false)"
+        )
     if data_store is None:
+        logging.getLogger(__name__).warning(
+            "Используется in-memory хранилище (dev/test режим). Укажите DATABASE_URL для Postgres."
+        )
         data_store = InMemoryDataStore()
     app.state.data_store = data_store
     party_sync_client = None

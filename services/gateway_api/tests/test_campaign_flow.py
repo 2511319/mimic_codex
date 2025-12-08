@@ -1,13 +1,28 @@
 from __future__ import annotations
-
 from typing import Iterator, Optional
 
+import os
+
+import psycopg
 import pytest
 from fastapi.testclient import TestClient
 from jsonschema import validate
 
 from rpg_gateway_api.app import create_app
 from rpg_gateway_api.config import get_settings
+from rpg_gateway_api.data import PostgresDataStore
+
+
+def _postgres_dsn() -> str:
+    return os.getenv("TEST_DATABASE_URL", "postgres://codex:codex@127.0.0.1:5433/codex")
+
+
+def _ensure_postgres_available(dsn: str) -> None:
+    try:
+        with psycopg.connect(dsn, connect_timeout=3) as conn, conn.cursor() as cur:
+            cur.execute("select 1")
+    except psycopg.OperationalError:
+        pytest.skip("Postgres недоступен, пропускаем интеграционный тест")
 
 
 def build_init_data(bot_token: str, *, user_id: int = 123456789, username: Optional[str] = "test_user") -> str:
@@ -56,14 +71,18 @@ def issue_token(client: TestClient, bot_token: str, *, user_id: int = 123456789)
 
 def test_full_campaign_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     bot_token = "123456:ABCDEF"
+    dsn = _postgres_dsn()
+    _ensure_postgres_available(dsn)
     monkeypatch.setenv("BOT_TOKEN", bot_token)
     monkeypatch.setenv("JWT_SECRET", "super-secret-key-123456")
     monkeypatch.setenv("JWT_TTL_SECONDS", "900")
     monkeypatch.setenv("API_VERSION", "1.0.0")
-    monkeypatch.setenv("DATABASE_URL", "postgres://codex:codex@127.0.0.1:5433/codex")
+    monkeypatch.setenv("DATABASE_URL", dsn)
+    monkeypatch.setenv("DATABASE_FALLBACK_TO_MEMORY", "false")
     monkeypatch.setenv("OPENAI_API_KEY", "")
 
     app = create_app()
+    assert isinstance(app.state.data_store, PostgresDataStore)
     client = TestClient(app)
     token = issue_token(client, bot_token)
     headers = {"Authorization": f"Bearer {token}"}
@@ -136,13 +155,14 @@ def test_full_campaign_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     summary = summary_resp.json()
     assert summary["adventureSummary"]["campaignRunId"] == run_id
     assert summary["retconPackage"]["campaignRunId"] == run_id
-    import psycopg
-    try:
-        with psycopg.connect("postgres://codex:codex@127.0.0.1:5433/codex") as conn, conn.cursor() as cur:
-            cur.execute("select count(*) from character_events where campaign_run_id=%s", (run_id,))
-            assert cur.fetchone()[0] >= 1
-    except psycopg.OperationalError:
-        pytest.skip("Postgres недоступен, пропускаем проверку сохранения событий")
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("select count(*) from character_events where campaign_run_id=%s", (run_id,))
+        assert cur.fetchone()[0] >= 1
+        cur.execute("select summary, retcon_package from adventure_summaries where campaign_run_id=%s", (run_id,))
+        stored_summary = cur.fetchone()
+        assert stored_summary is not None
+        assert stored_summary[0].get("campaignRunId") == run_id
+        assert stored_summary[1].get("campaignRunId") == run_id
     assert summary["adventureSummary"]["timeline"][0]["sceneType"]
     assert "outcome" in summary["adventureSummary"]["timeline"][0]["resultFlags"]
     # JSON Schema минимальная проверка
@@ -191,8 +211,7 @@ def test_full_campaign_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     }
     validate(instance=summary["adventureSummary"], schema=summary_schema)
     # эффекты применились: relation вырос после социальных сцен
-    import psycopg
-    with psycopg.connect("postgres://codex:codex@127.0.0.1:5433/codex") as conn, conn.cursor() as cur:
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
         cur.execute("select core_stats->>'relation' from characters where id=%s", (character_id,))
         relation1 = int(cur.fetchone()[0] or 0)
         cur.execute("select core_stats->>'relation' from characters where id=%s", (char2,))

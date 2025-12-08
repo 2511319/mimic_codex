@@ -10,7 +10,7 @@ from ..rate_limit import rate_limit
 
 from ..auth.telegram import InitDataValidationError, InitDataValidator
 from ..auth.dependencies import get_current_player, get_data_store
-from ..data import InMemoryDataStore, NotFoundError, SceneStateRecord, CampaignRunRecord
+from ..data import DataStoreProtocol, NotFoundError, SceneStateRecord, CampaignRunRecord
 from ..config import HealthPayload, Settings, get_settings
 from ..jwt_utils import issue_access_token
 from ..models import (
@@ -103,11 +103,11 @@ async def _generate_with_profile(profile: str, payload: SceneGenerateRequest, re
     return response.model_dump(by_alias=True)
 
 
-def _character_service(store: InMemoryDataStore) -> CharacterService:
+def _character_service(store: DataStoreProtocol) -> CharacterService:
     return CharacterService(store)
 
 
-def _party_service(store: InMemoryDataStore, character_service: CharacterService) -> PartyService:
+def _party_service(store: DataStoreProtocol, character_service: CharacterService) -> PartyService:
     return PartyService(store, character_service)
 
 
@@ -169,7 +169,7 @@ async def search_knowledge(
 @router.get("/v1/me", response_model=MeResponse, tags=["players"])
 def read_me(
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     """Возвращает профиль игрока и список его персонажей."""
 
@@ -182,7 +182,7 @@ def read_me(
 @router.get("/v1/characters", tags=["characters"])
 def list_characters(
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     character_service = _character_service(store)
     items = [_character_payload(c).model_dump(by_alias=True) for c in character_service.list_for_player(player.id)]
@@ -193,7 +193,7 @@ def list_characters(
 def create_character(
     payload: CharacterCreateRequest,
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     character_service = _character_service(store)
     record = character_service.create(
@@ -212,7 +212,7 @@ def update_character(
     character_id: int,
     payload: CharacterUpdateRequest,
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     character_service = _character_service(store)
     try:
@@ -229,7 +229,7 @@ def update_character(
 def retire_character(
     character_id: int,
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     character_service = _character_service(store)
     try:
@@ -245,7 +245,7 @@ def retire_character(
 @router.get("/v1/parties", tags=["parties"])
 def list_parties(
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     character_service = _character_service(store)
     party_service = _party_service(store, character_service)
@@ -257,7 +257,7 @@ def list_parties(
 def create_party(
     payload: PartyCreateRequest,
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     character_service = _character_service(store)
     party_service = _party_service(store, character_service)
@@ -279,7 +279,7 @@ def join_party(
     party_id: int,
     payload: PartyMemberRequest,
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     character_service = _character_service(store)
     party_service = _party_service(store, character_service)
@@ -301,7 +301,7 @@ def leave_party(
     party_id: int,
     payload: PartyMemberRequest,
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     character_service = _character_service(store)
     party_service = _party_service(store, character_service)
@@ -330,7 +330,7 @@ def start_campaign_run(
     payload: CampaignRunCreateRequest,
     request: Request,
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     engine = _campaign_engine(request)
     character_service = _character_service(store)
@@ -382,7 +382,7 @@ def apply_campaign_action(
     payload: CampaignActionRequest,
     request: Request,
     player=Depends(get_current_player),
-    store: InMemoryDataStore = Depends(get_data_store),
+    store: DataStoreProtocol = Depends(get_data_store),
 ) -> dict[str, Any]:
     engine = _campaign_engine(request)
     character_service = _character_service(store)
